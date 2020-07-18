@@ -2,11 +2,11 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle(MelonLoader.BuildInfo.Description)]
-[assembly: AssemblyDescription(MelonLoader.BuildInfo.Description)]
+[assembly: AssemblyTitle("AssetBundle extension for Il2Cpp Games")]
+[assembly: AssemblyDescription("AssetBundle extension for Il2Cpp Games")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany(MelonLoader.BuildInfo.Company)]
-[assembly: AssemblyProduct(MelonLoader.BuildInfo.Name + ".GeneratorProcess")]
+[assembly: AssemblyProduct("UnityEngine.Il2CppAssetBundleManager")]
 [assembly: AssemblyCopyright("Created by " + MelonLoader.BuildInfo.Author)]
 [assembly: AssemblyTrademark(MelonLoader.BuildInfo.Company)]
 [assembly: AssemblyCulture("")]
