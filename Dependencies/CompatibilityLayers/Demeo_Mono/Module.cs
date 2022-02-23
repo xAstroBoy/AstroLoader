@@ -13,6 +13,8 @@ namespace MelonLoader.CompatibilityLayers
 
         public override void Setup()
         {
+            MonoInternals.MonoResolveManager.GetAssemblyResolveInfo("Demeo").Override = typeof(Demeo_Module).Assembly;
+
             HarmonyLib.Harmony harmony = new HarmonyLib.Harmony("DemeoIntegration");
 
             harmony.Patch(typeof(ModdingAPI).GetMethod("GetInstalledMods", BindingFlags.Public | BindingFlags.Instance),
