@@ -4,13 +4,19 @@ using System.Text;
 
 namespace MelonLoader.Bootstrap;
 
-internal static partial class ConsoleHandler
+internal static class ConsoleHandler
 {
 #if WINDOWS
     internal static nint OutputHandle;
     internal static nint ErrorHandle;
 
-    private static nint outputHandle;
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int CloseHandleFn(uint hObject);
+#endif
+
+#if LINUX
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    private delegate int FCloseFn(nint stream);
 #endif
 
     public static bool IsOpen { get; private set; }
@@ -42,7 +48,19 @@ internal static partial class ConsoleHandler
                 Console.Title = title;
         }
 
+#if LINUX
+        PltHook.InstallHooks(
+        [
+            ("fclose", Marshal.GetFunctionPointerForDelegate<FCloseFn>(HookFClose))
+        ]);
+#endif
+
 #if WINDOWS
+        PltHook.InstallHooks(
+        [
+            ("CloseHandle", Marshal.GetFunctionPointerForDelegate<CloseHandleFn>(HookCloseHandle)),
+        ]);
+        
         Console.SetOut(new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });
         Console.SetError(new StreamWriter(Console.OpenStandardError()) { AutoFlush = true });
         Console.SetIn(new StreamReader(Console.OpenStandardInput()));
@@ -71,6 +89,32 @@ internal static partial class ConsoleHandler
         WindowsNative.SetStdHandle(WindowsNative.StdErrorHandle, ErrorHandle);
 #endif
     }
+
+#if LINUX
+    private static int HookFClose(nint stream)
+    {
+        int fd = LibcNative.Fileno(stream);
+        if (fd is LibcNative.Stdout or LibcNative.Stderr)
+        {
+            MelonDebug.Log($"Prevented the fclose on {(fd == LibcNative.Stdout ? "stdout" : "stderr")}");
+            return 0;
+        }
+        return LibcNative.FClose(stream);
+    }
+#endif
+
+#if WINDOWS
+    private static int HookCloseHandle(uint hObject)
+    {
+        if (hObject == OutputHandle || hObject == ErrorHandle)
+        {
+            MelonDebug.Log($"Prevented the CloseHandle of {(hObject == OutputHandle ? "stdout" : "stderr")}");
+            return 1;
+        }
+
+        return WindowsNative.CloseHandle(hObject);
+    }
+#endif
 
     public static ConsoleColor GetClosestConsoleColor(ColorARGB color)
     {
