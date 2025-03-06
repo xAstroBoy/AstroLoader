@@ -41,7 +41,8 @@ public static class Core
         if (Il2CppHandler.TryInitialize()
             || MonoHandler.TryInitialize())
         {
-            ConsoleHandler.NullHandles();
+            if (!LoaderConfig.Current.Loader.CapturePlayerLogs)
+                ConsoleHandler.NullHandles();
             return;
         }
 
