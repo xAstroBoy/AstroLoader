@@ -13,6 +13,7 @@ public static class Core
     public static nint LibraryHandle { get; private set; }
 
     internal static InternalLogger Logger { get; private set; } = new(ColorARGB.BlueViolet, "MelonLoader.Bootstrap");
+    internal static InternalLogger PlayerLogger { get; private set; } = new(ColorARGB.Turquoise, "UNITY");
     public static string DataDir { get; private set; } = null!;
     public static string GameDir { get; private set; } = null!;
 
