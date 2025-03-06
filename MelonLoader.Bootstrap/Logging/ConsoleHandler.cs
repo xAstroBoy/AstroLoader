@@ -7,8 +7,8 @@ namespace MelonLoader.Bootstrap;
 internal static partial class ConsoleHandler
 {
 #if WINDOWS
-    private const uint StdOutputHandle = 4294967285;
-    private const uint StdErrorHandle = 4294967284;
+    internal static nint OutputHandle;
+    internal static nint ErrorHandle;
 
     private static nint outputHandle;
 #endif
@@ -20,19 +20,19 @@ internal static partial class ConsoleHandler
     {
 #if WINDOWS
         // Do not create a new window if a window already exists or the output is being redirected
-        var consoleWindow = GetConsoleWindow();
-        var stdOut = GetStdHandle(StdOutputHandle);
+        var consoleWindow = WindowsNative.GetConsoleWindow();
+        var stdOut = WindowsNative.GetStdHandle(WindowsNative.StdOutputHandle);
         if (consoleWindow == 0 && stdOut == 0)
         {
-            AllocConsole();
-            consoleWindow = GetConsoleWindow();
+            WindowsNative.AllocConsole();
+            consoleWindow = WindowsNative.GetConsoleWindow();
             if (consoleWindow == 0)
                 return;
 
             HasOwnWindow = true;
 
             if (onTop)
-                SetWindowPos(consoleWindow, -1, 0, 0, 0, 0, 0x0001 | 0x0002);
+                WindowsNative.SetWindowPos(consoleWindow, -1, 0, 0, 0, 0, 0x0001 | 0x0002);
         }
 
         if (consoleWindow != 0)
@@ -49,7 +49,8 @@ internal static partial class ConsoleHandler
 
         Console.OutputEncoding = Encoding.UTF8;
 
-        outputHandle = GetStdHandle(StdOutputHandle);
+        OutputHandle = WindowsNative.GetStdHandle(WindowsNative.StdOutputHandle);
+        ErrorHandle = WindowsNative.GetStdHandle(WindowsNative.StdErrorHandle);
 #endif
 
         IsOpen = true;
@@ -58,16 +59,16 @@ internal static partial class ConsoleHandler
     public static void NullHandles()
     {
 #if WINDOWS
-        SetStdHandle(StdOutputHandle, 0);
-        SetStdHandle(StdErrorHandle, 0);
+        WindowsNative.SetStdHandle(WindowsNative.StdOutputHandle, 0);
+        WindowsNative.SetStdHandle(WindowsNative.StdErrorHandle, 0);
 #endif
     }
 
     public static void ResetHandles()
     {
 #if WINDOWS
-        SetStdHandle(StdOutputHandle, outputHandle);
-        SetStdHandle(StdErrorHandle, outputHandle);
+        WindowsNative.SetStdHandle(WindowsNative.StdOutputHandle, OutputHandle);
+        WindowsNative.SetStdHandle(WindowsNative.StdErrorHandle, ErrorHandle);
 #endif
     }
 
@@ -79,23 +80,4 @@ internal static partial class ConsoleHandler
         index |= color.B > 64 ? 1 : 0; // Blue bit
         return (ConsoleColor)index;
     }
-
-#if WINDOWS
-    [LibraryImport("kernel32.dll")]
-    private static partial nint GetStdHandle(uint nStdHandle);
-
-    [LibraryImport("kernel32.dll")]
-    private static partial void SetStdHandle(uint nStdHandle, nint handle);
-
-    [LibraryImport("kernel32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool AllocConsole();
-
-    [LibraryImport("kernel32.dll")]
-    private static partial nint GetConsoleWindow();
-
-    [LibraryImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
-#endif
 }
