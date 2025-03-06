@@ -86,6 +86,9 @@ public static class Core
             LoaderConfig.Current.Loader.DebugMode = true;
 #endif
 
+        if (ArgParser.IsDefined("--melonloader.captureplayerlogs"))
+            LoaderConfig.Current.Loader.CapturePlayerLogs = true;
+
         if (ArgParser.IsDefined("no-mods"))
             LoaderConfig.Current.Loader.Disable = true;
 
