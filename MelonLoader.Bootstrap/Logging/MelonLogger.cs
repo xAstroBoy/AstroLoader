@@ -110,6 +110,16 @@ internal static class MelonLogger
         {
             Core.Logger.Error("Failed to create any log files. Logging to console only");
         }
+
+        if (LoaderConfig.Current.Loader.CapturePlayerLogs)
+        {
+#if LINUX
+            LinuxPlayerLogsMirroring.SetupPlayerLogMirroring();
+#endif
+#if WINDOWS
+            WindowsPlayerLogsMirroring.SetupPlayerLogMirroring();
+#endif
+        }
     }
 
     private static void LogToFiles(string? log)
