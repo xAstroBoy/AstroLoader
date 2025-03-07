@@ -62,6 +62,7 @@
     <ItemGroup>
         <NativeLibrary Include="$(AppHostPath)" />
         <NativeLibrary Include="Deps/$(RuntimeIdentifier)/$(LibPrefix)dobby$(LibExt)" />
+        <NativeLibrary Include="Deps/$(RuntimeIdentifier)/$(LibPrefix)plthook$(LibExt)" />
     </ItemGroup>
 
     <!-- For some reasons, the linux export file .NET auto generate after compilation contains a hardcoded

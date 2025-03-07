@@ -133,6 +133,8 @@ Here is a list of the current config options (and their default values):
 disable = false
 # Equivalent to the '--melonloader.debug' launch option
 debug_mode = true
+# Capture all Unity player logs into MelonLoader's logs even if the game disabled them. NOTE: Depending on the game or Unity version, these logs can be overly verbose. Equivalent to the '--melonloader.captureplayerlogs' launch option
+capture_player_logs = true
 # Only use this if the game freezes when trying to quit. Equivalent to the '--quitfix' launch option
 force_quit = false
 # Disables the start screen. Equivalent to the '--melonloader.disablestartscreen' launch option
@@ -200,6 +202,7 @@ enable_cpp2il_native_method_detector = false
 | --melonloader.hideconsole | Hides the Console |
 | --melonloader.hidewarnings | Hides Warnings from Displaying |
 | --melonloader.debug | Debug Mode |
+| --melonloader.captureplayerlogs | Capture all Unity player logs into MelonLoader's logs even if the game disabled them. NOTE: Depending on the game or Unity version, these logs can be overly verbose |
 | --melonloader.debugsuspend | Let the Mono debug server wait until a debugger is attached when in Debug Mode (only for Mono games) |
 | --melonloader.debugipaddress | The IP address the Mono debug server will listen to when in Debug Mode (only for Mono games) |
 | --melonloader.debugport | The port the Mono debug server will listen to when in Debug Mode (only for Mono games)       |
@@ -265,6 +268,7 @@ MelonLoader is licensed under the Apache License, Version 2.0. See [LICENSE](htt
 
 Third-party Libraries used as Source Code and/or bundled in Binary Form:
 - [Dobby](https://github.com/jmpews/Dobby) is licensed under the Apache License, Version 2.0. See [LICENSE](https://github.com/jmpews/Dobby/blob/master/LICENSE) for the full License.
+- [plthook](https://github.com/kubo/plthook) is licensed under the 2-Clause BSD License. See [LICENSE](https://github.com/kubo/plthook/blob/master/plthook.h) text at the top of the file for the full License.
 - [Mono](https://github.com/Unity-Technologies/mono) is licensed under multiple licenses. See [LICENSE](https://github.com/Unity-Technologies/mono/blob/unity-master/LICENSE) for full details.
 - [HarmonyX](https://github.com/BepInEx/HarmonyX) is licensed under the MIT License. See [LICENSE](https://github.com/BepInEx/HarmonyX/blob/master/LICENSE) for the full License.
 - [MonoMod](https://github.com/MonoMod/MonoMod) is licensed under the MIT License. See [LICENSE](https://github.com/MonoMod/MonoMod/blob/master/LICENSE) for the full License.
