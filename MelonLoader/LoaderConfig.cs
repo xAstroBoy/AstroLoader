@@ -44,6 +44,10 @@ public class LoaderConfig
             = true;
 #endif
 
+        [TomlProperty("capture_player_logs")]
+        [TomlPrecedingComment("Capture all Unity player logs into MelonLoader's logs even if the game disabled them. NOTE: Depending on the game or Unity version, these logs can be overly verbose. Equivalent to the '--melonloader.captureplayerlogs' launch option")]
+        public bool CapturePlayerLogs { get; internal set; }
+
         [TomlProperty("force_quit")]
         [TomlPrecedingComment("Only use this if the game freezes when trying to quit. Equivalent to the '--quitfix' launch option")]
         public bool ForceQuit { get; internal set; }

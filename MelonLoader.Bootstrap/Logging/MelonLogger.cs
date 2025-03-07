@@ -80,6 +80,7 @@ internal static class MelonLogger
         try
         {
             var latest = new FileStream(latestPath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
+            latest.Seek(0, SeekOrigin.End);
             logFiles.Add(new StreamWriter(latest)
             {
                 AutoFlush = true
@@ -94,6 +95,7 @@ internal static class MelonLogger
         try
         {
             var cached = new FileStream(cachedPath, FileMode.Create, FileAccess.ReadWrite, FileShare.ReadWrite);
+            cached.Seek(0, SeekOrigin.End);
             logFiles.Add(new StreamWriter(cached)
             {
                 AutoFlush = true
@@ -108,12 +110,23 @@ internal static class MelonLogger
         {
             Core.Logger.Error("Failed to create any log files. Logging to console only");
         }
+
+        if (LoaderConfig.Current.Loader.CapturePlayerLogs)
+        {
+#if LINUX
+            LinuxPlayerLogsMirroring.SetupPlayerLogMirroring();
+#endif
+#if WINDOWS
+            WindowsPlayerLogsMirroring.SetupPlayerLogMirroring();
+#endif
+        }
     }
 
     private static void LogToFiles(string? log)
     {
         foreach (var file in logFiles)
         {
+            file.BaseStream.Seek(0, SeekOrigin.End);
             if (log == null)
             {
                 file.WriteLine();

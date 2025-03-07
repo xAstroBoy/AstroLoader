@@ -13,6 +13,7 @@ public static class Core
     public static nint LibraryHandle { get; private set; }
 
     internal static InternalLogger Logger { get; private set; } = new(ColorARGB.BlueViolet, "MelonLoader.Bootstrap");
+    internal static InternalLogger PlayerLogger { get; private set; } = new(ColorARGB.Turquoise, "UNITY");
     public static string DataDir { get; private set; } = null!;
     public static string GameDir { get; private set; } = null!;
 
@@ -40,7 +41,8 @@ public static class Core
         if (Il2CppHandler.TryInitialize()
             || MonoHandler.TryInitialize())
         {
-            ConsoleHandler.NullHandles();
+            if (!LoaderConfig.Current.Loader.CapturePlayerLogs)
+                ConsoleHandler.NullHandles();
             return;
         }
 
@@ -85,6 +87,9 @@ public static class Core
         if (ArgParser.IsDefined("melonloader.debug"))
             LoaderConfig.Current.Loader.DebugMode = true;
 #endif
+
+        if (ArgParser.IsDefined("--melonloader.captureplayerlogs"))
+            LoaderConfig.Current.Loader.CapturePlayerLogs = true;
 
         if (ArgParser.IsDefined("no-mods"))
             LoaderConfig.Current.Loader.Disable = true;
