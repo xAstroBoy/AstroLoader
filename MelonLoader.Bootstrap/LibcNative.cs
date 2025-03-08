@@ -21,6 +21,10 @@ internal partial class LibcNative
         nint rtLdFini,
         nint stackEnd);
 
+    [LibraryImport("libc", EntryPoint = "dlsym", StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
+    public static partial nint Dlsym(nint handle, string symbol);
+
     [LibraryImport("libc", EntryPoint = "setenv", StringMarshalling = StringMarshalling.Utf8)]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvCdecl)])]
     public static partial int Setenv(string name, string value,[MarshalAs(UnmanagedType.Bool)] bool overwrite);
