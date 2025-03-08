@@ -3,6 +3,7 @@ using MelonLoader.Bootstrap.RuntimeHandlers.Il2Cpp;
 using MelonLoader.Bootstrap.RuntimeHandlers.Mono;
 using MelonLoader.Bootstrap.Utils;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 using MelonLoader.Bootstrap.Logging;
 using Tomlet;
 
@@ -10,12 +11,23 @@ namespace MelonLoader.Bootstrap;
 
 public static class Core
 {
+#if LINUX
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+    private delegate nint DlsymFn(nint handle, string symbol);
+#endif
+#if WINDOWS
+    [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+    private delegate nint GetProcAddressFn(nint handle, string symbol);
+#endif
+
     public static nint LibraryHandle { get; private set; }
 
     internal static InternalLogger Logger { get; private set; } = new(ColorARGB.BlueViolet, "MelonLoader.Bootstrap");
     internal static InternalLogger PlayerLogger { get; private set; } = new(ColorARGB.Turquoise, "UNITY");
     public static string DataDir { get; private set; } = null!;
     public static string GameDir { get; private set; } = null!;
+
+    private static bool _runtimeInitialised;
 
     [RequiresDynamicCode("Calls InitConfig")]
     public static void Init(nint moduleHandle)
@@ -36,18 +48,56 @@ public static class Core
 
         MelonLogger.Init();
 
-        MelonDebug.Log("Starting probe for runtime");
-
-        if (Il2CppHandler.TryInitialize()
-            || MonoHandler.TryInitialize())
-        {
-            if (!LoaderConfig.Current.Loader.CapturePlayerLogs)
-                ConsoleHandler.NullHandles();
-            return;
-        }
-
-        Logger.Error("Current game runtime is not supported. The game might have a modified runtime or is not a real Unity game.");
+#if LINUX
+        PltHook.InstallHooks
+        ([
+            ("dlsym", Marshal.GetFunctionPointerForDelegate<DlsymFn>(HookDlsym))
+        ]);
+#endif
+#if WINDOWS
+        PltHook.InstallHooks
+        ([
+            ("GetProcAddress", Marshal.GetFunctionPointerForDelegate<GetProcAddressFn>(HookGetProcAddress))
+        ]);
+#endif
     }
+
+    private static readonly unsafe Dictionary<string, (Action<nint> InitMethod, IntPtr detourPtr)> SymbolRedirects = new()
+    {
+        { "il2cpp_init", (Il2CppHandler.Initialize, Marshal.GetFunctionPointerForDelegate<Il2CppLib.InitFn>(Il2CppHandler.InitDetour))},
+        { "il2cpp_runtime_invoke", (Il2CppHandler.Initialize, Marshal.GetFunctionPointerForDelegate<Il2CppLib.RuntimeInvokeFn>(Il2CppHandler.InvokeDetour))},
+        { "mono_jit_init_version", (MonoHandler.Initialize, Marshal.GetFunctionPointerForDelegate<MonoLib.JitInitVersionFn>(MonoHandler.InitDetour))},
+        { "mono_jit_parse_options", (MonoHandler.Initialize, Marshal.GetFunctionPointerForDelegate<MonoLib.JitParseOptionsFn>(MonoHandler.JitParseOptionsDetour))},
+        { "mono_debug_init", (MonoHandler.Initialize, Marshal.GetFunctionPointerForDelegate<MonoLib.DebugInitFn>(MonoHandler.DebugInitDetour))},
+        { "mono_image_open_from_data_with_name", (MonoHandler.Initialize, Marshal.GetFunctionPointerForDelegate<MonoLib.ImageOpenFromDataWithNameFn>(MonoHandler.ImageOpenFromDataWithNameDetour))}
+    };
+
+    private static nint RedirectSymbol(nint handle, string symbolName, nint originalSymbolAddress)
+    {
+        if (!SymbolRedirects.TryGetValue(symbolName, out var redirect))
+            return originalSymbolAddress;
+
+        MelonDebug.Log($"Redirecting {symbolName}");
+        if (!_runtimeInitialised)
+            redirect.InitMethod(handle);
+        _runtimeInitialised = true;
+        return redirect.detourPtr;
+    }
+
+#if LINUX
+    private static nint HookDlsym(nint handle, string symbol)
+    {
+        nint originalSymbolAddress = LibcNative.Dlsym(handle, symbol);
+        return RedirectSymbol(handle, symbol, originalSymbolAddress);
+    }
+#endif
+#if WINDOWS
+    private static nint HookGetProcAddress(nint handle, string symbol)
+    {
+        nint originalSymbolAddress = WindowsNative.GetProcAddress(handle, symbol);
+        return RedirectSymbol(handle, symbol, originalSymbolAddress);
+    }
+#endif
 
     [RequiresDynamicCode("Dynamically accesses LoaderConfig properties")]
     private static void InitConfig()

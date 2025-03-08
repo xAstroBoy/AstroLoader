@@ -1,18 +1,14 @@
-﻿using MelonLoader.Bootstrap.Utils;
+﻿using System.Runtime.InteropServices;
 using System.Text;
 
 namespace MelonLoader.Bootstrap.RuntimeHandlers.Mono;
 
 internal static class MonoHandler
 {
-    private static Dobby.Patch<MonoLib.JitInitVersionFn>? initPatch;
-    private static Dobby.Patch<MonoLib.JitParseOptionsFn>? jitParseOptionsPatch;
-    private static Dobby.Patch<MonoLib.DebugInitFn>? debugInitPatch;
-    private static Dobby.Patch<MonoLib.ImageOpenFromDataWithNameFn>? imageOpenFromDataWithNamePatch;
-
     private static nint assemblyManagerResolve;
     private static nint assemblyManagerLoadInfo;
     private static bool debugInitCalled;
+    private static bool jitInitDone;
 
     internal static nint Domain { get; private set; }
     internal static MonoLib Mono { get; private set; } = null!;
@@ -28,38 +24,24 @@ internal static class MonoHandler
     private const string MonoDebugNoSuspendArg = ",suspend=n";
     private const string MonoDebugNoSuspendArgOldMono = ",suspend=n,defer=y";
     
-    public static unsafe bool TryInitialize()
+    public static void Initialize(nint handle)
     {
-        var monoLib = MonoLib.TryLoad(Core.GameDir);
-        if (monoLib == null)
-            monoLib = MonoLib.TryLoad(Core.DataDir);
-        if (monoLib == null)
-            return false;
-
-        Mono = monoLib;
-
-        MelonDebug.Log("Patching mono init");
-        initPatch = Dobby.CreatePatch<MonoLib.JitInitVersionFn>(Mono.JitInitVersionPtr, InitDetour);
-        MelonDebug.Log("Patching mono jit parse options");
-        jitParseOptionsPatch = Dobby.CreatePatch<MonoLib.JitParseOptionsFn>(Mono.JitParseOptionsPtr, JitParseOptionsDetour);
-        MelonDebug.Log("Patching mono debug init");
-        debugInitPatch = Dobby.CreatePatch<MonoLib.DebugInitFn>(Mono.DebugInitPtr, DebugInitDetour);
-        MelonDebug.Log("Patching mono image open from data with name patch");
-        imageOpenFromDataWithNamePatch = Dobby.CreatePatch<MonoLib.ImageOpenFromDataWithNameFn>(Mono.ImageOpenFromDataWithNamePtr, ImageOpenFromDataWithNameDetour);
-
-        return true;
+        var mono = MonoLib.TryLoad(handle);
+        if (mono is null)
+        {
+            Core.Logger.Error("Could not load mono");
+            return;
+        }
+        Mono = mono;
     }
 
-    private static unsafe IntPtr ImageOpenFromDataWithNameDetour(byte* data, uint dataLen, bool needCopy, ref MonoLib.MonoImageOpenStatus status, bool refonly, string name)
+    internal static unsafe IntPtr ImageOpenFromDataWithNameDetour(byte* data, uint dataLen, bool needCopy, ref MonoLib.MonoImageOpenStatus status, bool refonly, string name)
     {
-        if (imageOpenFromDataWithNamePatch == null)
-            return IntPtr.Zero;
-
         if (string.IsNullOrEmpty(name))
-            return imageOpenFromDataWithNamePatch.Original(data, dataLen, needCopy, ref status, refonly, name);
+            return Mono.ImageOpenFromDataWithName(data, dataLen, needCopy, ref status, refonly, name);
 
         if (string.IsNullOrWhiteSpace(LoaderConfig.Current.UnityEngine.MonoSearchPathOverride))
-            return imageOpenFromDataWithNamePatch.Original(data, dataLen, needCopy, ref status, refonly, name);
+            return Mono.ImageOpenFromDataWithName(data, dataLen, needCopy, ref status, refonly, name);
 
         string fileName = Path.GetFileName(name);
         var foundOverridenFile = LoaderConfig.Current.UnityEngine.MonoSearchPathOverride
@@ -68,39 +50,36 @@ internal static class MonoHandler
             .FirstOrDefault(File.Exists);
         
         if (foundOverridenFile == null)
-            return imageOpenFromDataWithNamePatch.Original(data, dataLen, needCopy, ref status, refonly, name);
+            return Mono.ImageOpenFromDataWithName(data, dataLen, needCopy, ref status, refonly, name);
         
         MelonDebug.Log($"Overriding the image load of {name} to {foundOverridenFile}");
         byte[] newDataArray = File.ReadAllBytes(foundOverridenFile);
         uint newDataLen = (uint)newDataArray.Length;
         fixed (byte* newDataPtr = &newDataArray[0])
         {
-            var newReturn = imageOpenFromDataWithNamePatch.Original(newDataPtr, newDataLen, needCopy, ref status, refonly, name);
+            var newReturn = Mono.ImageOpenFromDataWithName(newDataPtr, newDataLen, needCopy, ref status, refonly, name);
             return newReturn;
         }
     }
 
-    private static void DebugInitDetour(MonoLib.MonoDebugFormat format)
+    internal static void DebugInitDetour(MonoLib.MonoDebugFormat format)
     {
-        if (debugInitPatch == null)
-            return;
-
-        debugInitPatch.Destroy();
-
         debugInitCalled = true;
-
-        debugInitPatch.Original(format);
+        Mono.DebugInit(format);
     }
 
-    private static nint InitDetour(nint name, nint b)
+    internal static nint InitDetour(nint domainName, nint runtimeVersion)
     {
-        if (initPatch == null)
-            return 0;
-
-        initPatch.Destroy();
+        if (jitInitDone)
+            return Mono.JitInitVersion(domainName, runtimeVersion);
 
         ConsoleHandler.ResetHandles();
         MelonDebug.Log("In init detour");
+        string domainNameStr = Marshal.PtrToStringAnsi(domainName)!;
+        string runtimeVersionStr = Marshal.PtrToStringAnsi(runtimeVersion)!;
+        MelonDebug.Log($"Domain: {domainNameStr}, Runtime version: {runtimeVersionStr}");
+        if (runtimeVersionStr.Length > 2 && int.TryParse(runtimeVersionStr.AsSpan(1, 1), out var runtimeVersionInt))
+            Mono.IsOld = runtimeVersionInt <= 3;
 
         StringBuilder newAssembliesPathSb = new();
         if (!string.IsNullOrWhiteSpace(LoaderConfig.Current.UnityEngine.MonoSearchPathOverride))
@@ -135,7 +114,7 @@ internal static class MonoHandler
         }
 
         MelonDebug.Log("Original init jit version");
-        Domain = initPatch.Original(name, b);
+        Domain = Mono.JitInitVersion(domainName, runtimeVersion);
 
         MelonDebug.Log("Setting Mono Main Thread");
         Mono.SetCurrentThreadAsMain();
@@ -152,19 +131,16 @@ internal static class MonoHandler
         Mono.ConfigParse(null);
 
         InitializeManaged();
-        jitParseOptionsPatch?.Destroy();
+        jitInitDone = true;
 
         return Domain;
     }
 
-    private static void JitParseOptionsDetour(IntPtr argc, string[] argv)
+    internal static void JitParseOptionsDetour(IntPtr argc, string[] argv)
     {
-        if (jitParseOptionsPatch == null)
-            return;
-
-        if (!LoaderConfig.Current.Loader.DebugMode)
+        if (jitInitDone || !LoaderConfig.Current.Loader.DebugMode)
         {
-            jitParseOptionsPatch.Original(argc, argv);
+            Mono.JitParseOptions(argc, argv);
             return;
         }
         
@@ -192,7 +168,7 @@ internal static class MonoHandler
         
         MelonDebug.Log($"Adding jit option: {string.Join(' ', newArgs)}");
 
-        jitParseOptionsPatch.Original(argc, newArgv);
+        Mono.JitParseOptions(argc, newArgv);
     }
 
     private static unsafe void InitializeManaged()

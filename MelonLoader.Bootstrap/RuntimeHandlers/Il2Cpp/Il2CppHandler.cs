@@ -5,45 +5,41 @@ namespace MelonLoader.Bootstrap.RuntimeHandlers.Il2Cpp;
 
 internal static class Il2CppHandler
 {
-    private static Dobby.Patch<Il2CppLib.InitFn>? initPatch;
-    private static Dobby.Patch<Il2CppLib.RuntimeInvokeFn>? invokePatch;
-
     private static Action? startFunc; // Prevent GC
 
     private static Il2CppLib il2cpp = null!;
+    private static bool il2cppInitDone;
+    private static bool invokeStarted;
 
-    public static bool TryInitialize()
+    public static void Initialize(nint handle)
     {
-        var il2cppLib = Il2CppLib.TryLoad();
-        if (il2cppLib == null)
-            return false;
+        var il2cppLib = Il2CppLib.TryLoad(handle);
+        if (il2cppLib is null)
+        {
+            Core.Logger.Error("Could not load il2cpp");
+            return;
+        }
 
         il2cpp = il2cppLib;
-
-        MelonDebug.Log("Patching il2cpp init");
-        initPatch = Dobby.CreatePatch<Il2CppLib.InitFn>(il2cpp.InitPtr, InitDetour);
-
-        return true;
     }
 
-    private static nint InitDetour(nint a)
+    internal static nint InitDetour(nint a)
     {
-        if (initPatch == null)
-            return 0;
-
-        initPatch.Destroy();
+        if (il2cppInitDone)
+            return il2cpp.Init(a);
 
         ConsoleHandler.ResetHandles();
         MelonDebug.Log("In init detour");
 
-        var domain = initPatch.Original(a);
+        var domain = il2cpp.Init(a);
 
         InitializeManaged();
+        il2cppInitDone = true;
 
         return domain;
     }
 
-    private static unsafe void InitializeManaged()
+    private static void InitializeManaged()
     {
         var managedDir = Path.Combine(LoaderConfig.Current.Loader.BaseDirectory, "MelonLoader", "net6");
         var runtimeConfigPath = Path.Combine(managedDir, "MelonLoader.runtimeconfig.json");
@@ -103,24 +99,21 @@ internal static class Il2CppHandler
         }
 
         startFunc = Marshal.GetDelegateForFunctionPointer<Action>(startFuncPtr);
-
-        MelonDebug.Log("Patching invoke");
-        invokePatch = Dobby.CreatePatch<Il2CppLib.RuntimeInvokeFn>(il2cpp.RuntimeInvokePtr, InvokeDetour);
     }
 
-    private static nint InvokeDetour(nint method, nint obj, nint args, nint exc)
+    internal static nint InvokeDetour(nint method, nint obj, nint args, nint exc)
     {
-        if (invokePatch == null)
-            return 0;
+        if (invokeStarted)
+            return il2cpp.RuntimeInvoke(method, obj, args, exc);
 
-        var result = invokePatch.Original(method, obj, args, exc);
+        var result = il2cpp.RuntimeInvoke(method, obj, args, exc);
 
         var name = il2cpp.GetMethodName(method);
         if (name == null || !name.Contains("Internal_ActiveSceneChanged"))
             return result;
 
+        invokeStarted = true;
         MelonDebug.Log("Invoke hijacked");
-        invokePatch.Destroy();
 
         Start();
 

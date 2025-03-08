@@ -10,6 +10,10 @@ internal static partial class WindowsNative
     internal const uint StdOutputHandle = 4294967285;
     internal const uint StdErrorHandle = 4294967284;
 
+    [LibraryImport("kernel32.dll", EntryPoint = "GetProcAddress", StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = [typeof(CallConvStdcall)])]
+    internal static partial nint GetProcAddress(nint hModule, string lpProcName);
+
     [LibraryImport("kernel32.dll")]
     [UnmanagedCallConv(CallConvs = [typeof(CallConvStdcall)])]
     internal static partial nint GetStdHandle(uint nStdHandle);
