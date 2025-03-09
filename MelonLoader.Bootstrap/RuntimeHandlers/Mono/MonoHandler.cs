@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace MelonLoader.Bootstrap.RuntimeHandlers.Mono;
@@ -16,10 +16,10 @@ internal static class MonoHandler
     private const char MonoPathSeparator =
 #if WINDOWS
         ';';
-#elif LINUX
+#elif LINUX || OSX
         ':';
 #endif
-    
+
     private const string MonoDebugArgsStart = "--debugger-agent=transport=dt_socket,server=y,address=";
     private const string MonoDebugNoSuspendArg = ",suspend=n";
     private const string MonoDebugNoSuspendArgOldMono = ",suspend=n,defer=y";
@@ -48,7 +48,7 @@ internal static class MonoHandler
             .Split(MonoPathSeparator)
             .Select(x => Path.GetFullPath(Path.Combine(x, fileName)))
             .FirstOrDefault(File.Exists);
-        
+
         if (foundOverridenFile == null)
             return Mono.ImageOpenFromDataWithName(data, dataLen, needCopy, ref status, refonly, name);
         
@@ -126,7 +126,7 @@ internal static class MonoHandler
 
             Mono.DomainSetConfig(Domain, Core.GameDir, configFile);
         }
-        
+
         MelonDebug.Log("Parsing default Mono config");
         Mono.ConfigParse(null);
 
@@ -143,7 +143,7 @@ internal static class MonoHandler
             Mono.JitParseOptions(argc, argv);
             return;
         }
-        
+
         string newArgs;
         string? dnSpyEnv = Environment.GetEnvironmentVariable("DNSPY_UNITY_DBG2");
         if (dnSpyEnv == null)
@@ -160,12 +160,12 @@ internal static class MonoHandler
         {
             newArgs = dnSpyEnv;
         }
-        
+
         string[] newArgv = new string[argc + 1];
         Array.Copy(argv, 0, newArgv, 0, argc);
         argc++;
         newArgv[argc - 1] = newArgs;
-        
+
         MelonDebug.Log($"Adding jit option: {string.Join(' ', newArgs)}");
 
         Mono.JitParseOptions(argc, newArgv);
