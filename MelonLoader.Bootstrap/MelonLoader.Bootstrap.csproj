@@ -11,7 +11,7 @@
         <NoWarn>LNK4099</NoWarn>
         <InvariantGlobalization>true</InvariantGlobalization>
     </PropertyGroup>
-    
+
     <PropertyGroup Condition="'$(RuntimeIdentifier.StartsWith(`linux-`))' == 'true'">
         <ExportsFile>linuxexports.def</ExportsFile>
     </PropertyGroup>
@@ -23,6 +23,9 @@
     <!-- This is needed by libnethost.a, not doing this will result in a runtime crash on boot -->
     <ItemGroup Condition="'$(RuntimeIdentifier.StartsWith(`linux-`))' == 'true'">
         <LinkerArg Include="-Wl,-lstdc++" Visible="false" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(RuntimeIdentifier.StartsWith(`osx-`))' == 'true'">
+        <LinkerArg Include="-Wl,-lc++" Visible="false" />
     </ItemGroup>
 
     <PropertyGroup Condition="'$(Configuration)' != 'Debug'">
@@ -37,7 +40,7 @@
         <None Include="$(SolutionDir)/CHANGELOG.md" CopyToOutputDirectory="PreserveNewest" Link="MelonLoader/Documentation/%(Filename)%(Extension)" />
         <None Include="$(SolutionDir)/README.md" CopyToOutputDirectory="PreserveNewest" Link="MelonLoader/Documentation/%(Filename)%(Extension)" />
     </ItemGroup>
-    
+
     <ItemGroup>
         <EmbeddedResource Include="TrimmerRoots.xml">
             <LogicalName>ILLink.Descriptors.xml</LogicalName>
@@ -54,7 +57,7 @@
         <PackageReference Include="Pastel" Version="6.0.1" />
         <PackageReference Include="Samboy063.Tomlet" Version="6.0.0" />
     </ItemGroup>
-    
+
     <ItemGroup>
         <Compile Include="$(SolutionDir)/MelonLoader/LoaderConfig.cs" />
     </ItemGroup>
@@ -75,8 +78,6 @@
                           Overwrite="true"/>
     </Target>
 
-    <Target Name="PublishAsBuildAfterTarget" AfterTargets="Build" DependsOnTargets="Publish" />
-    
     <Target Condition="'$(RuntimeIdentifier.StartsWith(`win-`))' == 'true'" Name="RenameBinary" AfterTargets="Build">
         <Move SourceFiles="$(PublishDir)/$(TargetName).dll" DestinationFiles="$(PublishDir)/version.dll" />
     </Target>
