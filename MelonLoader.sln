@@ -65,6 +65,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnityEngine.Il2CppAssetBund
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnityEngine.Il2CppImageConversionManager", "UnityUtilities\UnityEngine.Il2CppImageConversionManager\UnityEngine.Il2CppImageConversionManager.csproj", "{8D271ABF-209A-4AF9-8C62-EF92806B7DC1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PortablePdbToMdb", "PortablePdbToMdb\PortablePdbToMdb.csproj", "{90832409-6D54-445D-9310-DCE81F0BB991}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -173,6 +175,14 @@ Global
 		{8D271ABF-209A-4AF9-8C62-EF92806B7DC1}.Release|x64.Build.0 = Release|x64
 		{8D271ABF-209A-4AF9-8C62-EF92806B7DC1}.Release|x86.ActiveCfg = Release|x86
 		{8D271ABF-209A-4AF9-8C62-EF92806B7DC1}.Release|x86.Build.0 = Release|x86
+		{90832409-6D54-445D-9310-DCE81F0BB991}.Debug|x86.ActiveCfg = Debug|x86
+		{90832409-6D54-445D-9310-DCE81F0BB991}.Debug|x86.Build.0 = Debug|x86
+		{90832409-6D54-445D-9310-DCE81F0BB991}.Debug|x64.ActiveCfg = Debug|x64
+		{90832409-6D54-445D-9310-DCE81F0BB991}.Release|x86.ActiveCfg = Release|x86
+		{90832409-6D54-445D-9310-DCE81F0BB991}.Release|x86.Build.0 = Release|x86
+		{90832409-6D54-445D-9310-DCE81F0BB991}.Release|x64.ActiveCfg = Release|x64
+		{90832409-6D54-445D-9310-DCE81F0BB991}.Release|x64.Build.0 = Release|x64
+		{90832409-6D54-445D-9310-DCE81F0BB991}.Debug|x64.Build.0 = Debug|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
