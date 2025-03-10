@@ -7,7 +7,7 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <EnableDynamicLoading>true</EnableDynamicLoading>
-        <DebugType>embedded</DebugType>
+        <DebugType>portable</DebugType>
         <IsPackable>true</IsPackable>
         <PackageId>LavaGang.MelonLoader</PackageId>
         <PackageTags>modding unity</PackageTags>
