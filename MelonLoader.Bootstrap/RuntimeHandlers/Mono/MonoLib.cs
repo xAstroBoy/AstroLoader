@@ -5,37 +5,14 @@ namespace MelonLoader.Bootstrap.RuntimeHandlers.Mono;
 
 internal class MonoLib
 {
-    private static readonly string[] folderNames =
-    [
-        "MonoBleedingEdge",
-        "Mono",
-        "MonoBleedingEdge.x64",
-        "MonoBleedingEdge.x86"
-    ];
-
-    private static readonly string[] libNames =
-    [
-#if WINDOWS
-        "mono.dll",
-        "mono-2.0-bdwgc.dll",
-        "mono-2.0-sgen.dll",
-        "mono-2.0-boehm.dll"
-#elif LINUX
-        "libmono.so",
-        "libmonobdwgc-2.0.so"
-#endif
-    ];
-
     private static readonly List<Delegate> passedDelegates = [];
 
+    public bool IsOld { get; set; }
     public required nint Handle { get; init; }
-    public required bool IsOld { get; init; }
 
-    public required nint JitInitVersionPtr { get; init; }
-    public required nint DebugInitPtr { get; init; }
-    public required nint JitParseOptionsPtr { get; init; }
-    public required nint RuntimeInvokePtr { get; init; }
-    public required nint ImageOpenFromDataWithNamePtr { get; init; }
+    public required JitInitVersionFn JitInitVersion { get; init; }
+    public required JitParseOptionsFn JitParseOptions { get; init; }
+    public required ImageOpenFromDataWithNameFn ImageOpenFromDataWithName { get; init; }
 
     public required ThreadCurrentFn ThreadCurrent { get; init; }
     public required DebugInitFn DebugInit { get; init; }
@@ -59,30 +36,15 @@ internal class MonoLib
     public DomainSetConfigFn? DomainSetConfig { get; init; }
     public DebugEnabledFn? DebugEnabled { get; init; }
 
-    public static MonoLib? TryLoad(string searchDir)
+    public static MonoLib? TryLoad(nint hRuntime)
     {
-        var monoPath = FindMonoPath(searchDir);
-        if (monoPath == null)
-            return null;
-
-        if (!NativeLibrary.TryLoad(monoPath, out var hRuntime))
-            return null;
-
-        var monoName = Path.GetFileNameWithoutExtension(monoPath);
-#if LINUX
-        if (monoName.StartsWith("lib"))
-            monoName = monoName[3..];
-#endif
-
-        var isOld = monoName.Equals("mono", StringComparison.OrdinalIgnoreCase);
-
         MelonDebug.Log("Loading Mono exports");
 
-        if (!NativeLibrary.TryGetExport(hRuntime, "mono_jit_init_version", out var jitInitVersionPtr)
-            || !NativeLibrary.TryGetExport(hRuntime, "mono_runtime_invoke", out var runtimeInvokePtr)
-            || !NativeLibrary.TryGetExport(hRuntime, "mono_jit_parse_options", out var jitParseOptionsPtr)
-            || !NativeLibrary.TryGetExport(hRuntime, "mono_debug_init", out var debugInitPtr)
-            || !NativeLibrary.TryGetExport(hRuntime, "mono_image_open_from_data_with_name", out var imageOpenFromDataWithNamePtr)
+        if (!NativeFunc.GetExport<JitInitVersionFn>(hRuntime, "mono_jit_init_version", out var jitInitVersion)
+            || !NativeFunc.GetExport<RuntimeInvokeFn>(hRuntime, "mono_runtime_invoke", out var runtimeInvoke)
+            || !NativeFunc.GetExport<JitParseOptionsFn>(hRuntime, "mono_jit_parse_options", out var jitParseOptions)
+            || !NativeFunc.GetExport<DebugInitFn>(hRuntime, "mono_debug_init", out var debugInit)
+            || !NativeFunc.GetExport<ImageOpenFromDataWithNameFn>(hRuntime, "mono_image_open_from_data_with_name", out var imageOpenFromDataWithName)
             || !NativeFunc.GetExport<ConfigParseFn>(hRuntime, "mono_config_parse", out var configParse)
             || !NativeFunc.GetExport<ThreadCurrentFn>(hRuntime, "mono_thread_current", out var threadCurrent)
             || !NativeFunc.GetExport<ThreadSetMainFn>(hRuntime, "mono_thread_set_main", out var threadSetMain)
@@ -101,22 +63,16 @@ internal class MonoLib
             || !NativeFunc.GetExport<InstallAssemblyLoadHookFn>(hRuntime, "mono_install_assembly_load_hook", out var installAssemblyLoadHook))
             return null;
 
-        var runtimeInvoke = Marshal.GetDelegateForFunctionPointer<RuntimeInvokeFn>(runtimeInvokePtr);
-        var debugInit = Marshal.GetDelegateForFunctionPointer<DebugInitFn>(debugInitPtr);
-
         var debugEnabled = NativeFunc.GetExport<DebugEnabledFn>(hRuntime, "mono_debug_enabled");
         var domainSetConfig = NativeFunc.GetExport<DomainSetConfigFn>(hRuntime, "mono_domain_set_config");
 
         return new()
         {
             Handle = hRuntime,
-            IsOld = isOld,
             RuntimeInvoke = runtimeInvoke,
-            JitInitVersionPtr = jitInitVersionPtr,
-            JitParseOptionsPtr = jitParseOptionsPtr,
-            RuntimeInvokePtr = runtimeInvokePtr,
+            JitInitVersion = jitInitVersion,
+            JitParseOptions = jitParseOptions,
             ThreadCurrent = threadCurrent,
-            DebugInitPtr = debugInitPtr,
             DebugEnabled = debugEnabled,
             DebugInit = debugInit,
             ThreadSetMain = threadSetMain,
@@ -130,45 +86,13 @@ internal class MonoLib
             AssemblyGetImage = assemblyGetImage,
             ClassFromName = classFromName,
             ClassGetMethodFromName = classGetMethodFromName,
-            ImageOpenFromDataWithNamePtr = imageOpenFromDataWithNamePtr,
+            ImageOpenFromDataWithName = imageOpenFromDataWithName,
             InstallAssemblyPreloadHook = installAssemblyPreloadHook,
             InstallAssemblySearchHook = installAssemblySearchHook,
             InstallAssemblyLoadHook = installAssemblyLoadHook,
             DomainSetConfig = domainSetConfig,
             ConfigParse = configParse
         };
-    }
-
-    private static string? FindMonoPath(string searchDir)
-    {
-        foreach (var folder in folderNames)
-        {
-            foreach (var lib in libNames)
-            {
-                var path = Path.Combine(searchDir, folder, lib);
-                if (File.Exists(path))
-                    return path;
-
-                path = Path.Combine(searchDir, folder, "EmbedRuntime", lib);
-                if (File.Exists(path))
-                    return path;
-
-                path = Path.Combine(searchDir, folder, lib);
-                if (File.Exists(path))
-                    return path;
-
-                path = Path.Combine(searchDir, folder, "EmbedRuntime", lib);
-                if (File.Exists(path))
-                    return path;
-
-                path = Path.Combine(searchDir, folder, "x86_64", lib);
-                if (File.Exists(path))
-                    return path;
-            }
-        }
-
-        MelonDebug.Log("Probe for Mono failed");
-        return null;
     }
 
     public void SetCurrentThreadAsMain()
