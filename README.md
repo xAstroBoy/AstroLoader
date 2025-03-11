@@ -135,6 +135,8 @@ disable = false
 debug_mode = true
 # Capture all Unity player logs into MelonLoader's logs even if the game disabled them. NOTE: Depending on the game or Unity version, these logs can be overly verbose. Equivalent to the '--melonloader.captureplayerlogs' launch option
 capture_player_logs = true
+# The maximum Harmony log verbosity to capture into MelonLoader's logs. Possible values in verbosity order are: "None", "Error", "Warn", "Info", "Debug", or "IL". Equivalent to the '--melonloader.harmonyloglevel' launch option
+harmony_log_level = "Warn"
 # Only use this if the game freezes when trying to quit. Equivalent to the '--quitfix' launch option
 force_quit = false
 # Disables the start screen. Equivalent to the '--melonloader.disablestartscreen' launch option
@@ -203,6 +205,7 @@ enable_cpp2il_native_method_detector = false
 | --melonloader.hidewarnings | Hides Warnings from Displaying |
 | --melonloader.debug | Debug Mode |
 | --melonloader.captureplayerlogs | Capture all Unity player logs into MelonLoader's logs even if the game disabled them. NOTE: Depending on the game or Unity version, these logs can be overly verbose |
+| --melonloader.harmonyloglevel | The maximum Harmony log verbosity to capture into MelonLoader's logs. Possible values in verbosity order are: "None", "Error", "Warn", "Info", "Debug", or "IL" |
 | --melonloader.debugsuspend | Let the Mono debug server wait until a debugger is attached when in Debug Mode (only for Mono games) |
 | --melonloader.debugipaddress | The IP address the Mono debug server will listen to when in Debug Mode (only for Mono games) |
 | --melonloader.debugport | The port the Mono debug server will listen to when in Debug Mode (only for Mono games)       |
