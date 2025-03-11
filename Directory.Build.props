@@ -38,5 +38,19 @@
     <PropertyGroup>
         <MLOutDir>$(SolutionDir)/Output/$(Configuration)/$(RuntimeIdentifier)</MLOutDir>
     </PropertyGroup>
+
+    <ItemGroup Condition="'$(TargetFramework)' == 'net35'">
+        <ProjectReference Include="$(SolutionDir)/PortablePdbToMdb/PortablePdbToMdb.csproj"
+                          ReferenceOutputAssembly="false"
+                          SkipGetTargetFrameworkProperties="true"
+                          GlobalPropertiesToRemove="TargetFramework" />
+    </ItemGroup>
+    <UsingTask TaskName="PortablePdbToMdb"
+               Condition="'$(TargetFramework)' == 'net35'"
+               AssemblyFile="$(SolutionDir)/PortablePdbToMdb/bin/PortablePdbToMdb.dll"
+               TaskFactory="TaskHostFactory" />
+    <Target Name="SymbolsConvert" Condition="'$(TargetFramework)' == 'net35'" AfterTargets="AfterBuild">
+        <PortablePdbToMdb AssemblyPath="$(TargetPath)" />
+    </Target>
 </Project>
   

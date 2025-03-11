@@ -131,12 +131,8 @@ public static class Core
 
         LoaderConfig.Current.Loader.BaseDirectory = baseDir;
 
-#if DEBUG
-        LoaderConfig.Current.Loader.DebugMode = true;
-#else
         if (ArgParser.IsDefined("melonloader.debug"))
             LoaderConfig.Current.Loader.DebugMode = true;
-#endif
 
         if (ArgParser.IsDefined("--melonloader.captureplayerlogs"))
             LoaderConfig.Current.Loader.CapturePlayerLogs = true;
