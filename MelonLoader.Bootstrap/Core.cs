@@ -14,10 +14,12 @@ public static class Core
 #if LINUX
     [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
     private delegate nint DlsymFn(nint handle, string symbol);
+    private static readonly DlsymFn HookDlsymDelegate = HookDlsym;
 #endif
 #if WINDOWS
     [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Ansi)]
     private delegate nint GetProcAddressFn(nint handle, string symbol);
+    private static readonly GetProcAddressFn HookGetProcAddressDelegate = HookGetProcAddress;
 #endif
 
     public static nint LibraryHandle { get; private set; }
@@ -51,25 +53,33 @@ public static class Core
 #if LINUX
         PltHook.InstallHooks
         ([
-            ("dlsym", Marshal.GetFunctionPointerForDelegate<DlsymFn>(HookDlsym))
+            ("dlsym", Marshal.GetFunctionPointerForDelegate(HookDlsymDelegate))
         ]);
 #endif
 #if WINDOWS
         PltHook.InstallHooks
         ([
-            ("GetProcAddress", Marshal.GetFunctionPointerForDelegate<GetProcAddressFn>(HookGetProcAddress))
+            ("GetProcAddress", Marshal.GetFunctionPointerForDelegate(HookGetProcAddressDelegate))
         ]);
 #endif
     }
 
-    private static readonly unsafe Dictionary<string, (Action<nint> InitMethod, IntPtr detourPtr)> SymbolRedirects = new()
+
+    private static readonly Il2CppLib.InitFn Il2CPPInitDetour = Il2CppHandler.InitDetour;
+    private static readonly Il2CppLib.RuntimeInvokeFn InvokeDetour = Il2CppHandler.InvokeDetour;
+    private static readonly MonoLib.JitInitVersionFn MonoInitDetour = MonoHandler.InitDetour;
+    private static readonly MonoLib.JitParseOptionsFn JitParseOptionsDetour = MonoHandler.JitParseOptionsDetour;
+    private static readonly MonoLib.DebugInitFn DebugInitDetour = MonoHandler.DebugInitDetour;
+    private static readonly unsafe MonoLib.ImageOpenFromDataWithNameFn ImageOpenFromDataWithName = MonoHandler.ImageOpenFromDataWithNameDetour;
+
+    private static readonly Dictionary<string, (Action<nint> InitMethod, IntPtr detourPtr)> SymbolRedirects = new()
     {
-        { "il2cpp_init", (Il2CppHandler.Initialize, Marshal.GetFunctionPointerForDelegate<Il2CppLib.InitFn>(Il2CppHandler.InitDetour))},
-        { "il2cpp_runtime_invoke", (Il2CppHandler.Initialize, Marshal.GetFunctionPointerForDelegate<Il2CppLib.RuntimeInvokeFn>(Il2CppHandler.InvokeDetour))},
-        { "mono_jit_init_version", (MonoHandler.Initialize, Marshal.GetFunctionPointerForDelegate<MonoLib.JitInitVersionFn>(MonoHandler.InitDetour))},
-        { "mono_jit_parse_options", (MonoHandler.Initialize, Marshal.GetFunctionPointerForDelegate<MonoLib.JitParseOptionsFn>(MonoHandler.JitParseOptionsDetour))},
-        { "mono_debug_init", (MonoHandler.Initialize, Marshal.GetFunctionPointerForDelegate<MonoLib.DebugInitFn>(MonoHandler.DebugInitDetour))},
-        { "mono_image_open_from_data_with_name", (MonoHandler.Initialize, Marshal.GetFunctionPointerForDelegate<MonoLib.ImageOpenFromDataWithNameFn>(MonoHandler.ImageOpenFromDataWithNameDetour))}
+        { "il2cpp_init", (Il2CppHandler.Initialize, Marshal.GetFunctionPointerForDelegate(Il2CPPInitDetour))},
+        { "il2cpp_runtime_invoke", (Il2CppHandler.Initialize, Marshal.GetFunctionPointerForDelegate(InvokeDetour))},
+        { "mono_jit_init_version", (MonoHandler.Initialize, Marshal.GetFunctionPointerForDelegate(MonoInitDetour))},
+        { "mono_jit_parse_options", (MonoHandler.Initialize, Marshal.GetFunctionPointerForDelegate(JitParseOptionsDetour))},
+        { "mono_debug_init", (MonoHandler.Initialize, Marshal.GetFunctionPointerForDelegate(DebugInitDetour))},
+        { "mono_image_open_from_data_with_name", (MonoHandler.Initialize, Marshal.GetFunctionPointerForDelegate(ImageOpenFromDataWithName))}
     };
 
     private static nint RedirectSymbol(nint handle, string symbolName, nint originalSymbolAddress)
