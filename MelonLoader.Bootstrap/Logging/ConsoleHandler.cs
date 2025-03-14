@@ -12,11 +12,13 @@ internal static class ConsoleHandler
 
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
     private delegate int CloseHandleFn(uint hObject);
+    private static readonly CloseHandleFn HookCloseHandleDelegate = HookCloseHandle;
 #endif
 
 #if LINUX
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate int FCloseFn(nint stream);
+    private static readonly FCloseFn HookFCloseDelegate = HookFClose;
 #endif
 
     public static bool IsOpen { get; private set; }
@@ -51,14 +53,14 @@ internal static class ConsoleHandler
 #if LINUX
         PltHook.InstallHooks(
         [
-            ("fclose", Marshal.GetFunctionPointerForDelegate<FCloseFn>(HookFClose))
+            ("fclose", Marshal.GetFunctionPointerForDelegate(HookFCloseDelegate))
         ]);
 #endif
 
 #if WINDOWS
         PltHook.InstallHooks(
         [
-            ("CloseHandle", Marshal.GetFunctionPointerForDelegate<CloseHandleFn>(HookCloseHandle)),
+            ("CloseHandle", Marshal.GetFunctionPointerForDelegate(HookCloseHandleDelegate)),
         ]);
         
         Console.SetOut(new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });

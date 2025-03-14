@@ -19,6 +19,9 @@ internal static class WindowsPlayerLogsMirroring
         int dwFlagsAndAttributes,
         nint hTemplateFile);
 
+    private static readonly CreateFileWFn HookCreateFileWDelegate = HookCreateFileW;
+    private static readonly WriteFileFn HookWriteFileDelegate = HookWriteFile;
+    
     private static bool _foundPlayerLogsHandle;
     private static nint _logHandle;
     
@@ -28,8 +31,8 @@ internal static class WindowsPlayerLogsMirroring
     {
         PltHook.InstallHooks(
         [
-            ("CreateFileW", Marshal.GetFunctionPointerForDelegate<CreateFileWFn>(HookCreateFileW)),
-            ("WriteFile", Marshal.GetFunctionPointerForDelegate<WriteFileFn>(HookWriteFile))
+            ("CreateFileW", Marshal.GetFunctionPointerForDelegate(HookCreateFileWDelegate)),
+            ("WriteFile", Marshal.GetFunctionPointerForDelegate(HookWriteFileDelegate))
         ]);
     }
 
