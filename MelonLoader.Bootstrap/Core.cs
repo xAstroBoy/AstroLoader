@@ -137,6 +137,9 @@ public static class Core
         if (ArgParser.IsDefined("--melonloader.captureplayerlogs"))
             LoaderConfig.Current.Loader.CapturePlayerLogs = true;
 
+        if (Enum.TryParse<LoaderConfig.CoreConfig.HarmonyLogVerbosity>(ArgParser.GetValue("--melonloader.harmonyloglevel"), out var harmonyLogLevel))
+            LoaderConfig.Current.Loader.HarmonyLogLevel = harmonyLogLevel;
+
         if (ArgParser.IsDefined("no-mods"))
             LoaderConfig.Current.Loader.Disable = true;
 

@@ -48,6 +48,10 @@ public class LoaderConfig
         [TomlPrecedingComment("Capture all Unity player logs into MelonLoader's logs even if the game disabled them. NOTE: Depending on the game or Unity version, these logs can be overly verbose. Equivalent to the '--melonloader.captureplayerlogs' launch option")]
         public bool CapturePlayerLogs { get; internal set; }
 
+        [TomlProperty("harmony_log_level")]
+        [TomlPrecedingComment("The maximum Harmony log verbosity to capture into MelonLoader's logs. Possible values in verbosity order are: \"None\", \"Error\", \"Warn\", \"Info\", \"Debug\", or \"IL\". Equivalent to the '--melonloader.harmonyloglevel' launch option")]
+        public HarmonyLogVerbosity HarmonyLogLevel { get; internal set; } = HarmonyLogVerbosity.Warn;
+
         [TomlProperty("force_quit")]
         [TomlPrecedingComment("Only use this if the game freezes when trying to quit. Equivalent to the '--quitfix' launch option")]
         public bool ForceQuit { get; internal set; }
@@ -71,7 +75,17 @@ public class LoaderConfig
             Rainbow,
             RandomRainbow,
             Lemon
-        };
+        }
+
+        public enum HarmonyLogVerbosity
+        {
+            None,
+            Info,
+            Warn,
+            Error,
+            Debug,
+            IL
+        }
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]

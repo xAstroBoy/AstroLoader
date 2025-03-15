@@ -152,6 +152,8 @@ namespace MelonLoader
 
 #endif
 
+            HarmonyLogger.Setup();
+
 #if !WINDOWS && !NET6_0_OR_GREATER
             // Using Process.Start can run Console..cctor
             // Since MonoMod's PlatformHelper (used by DetourHelper.Native) runs Process.Start to determine ARM/x86
