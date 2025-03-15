@@ -17,6 +17,11 @@ internal static class LinuxPlayerLogsMirroring
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate int Dup2Fn(int oldFd, int newFd);
+
+    private static readonly Fopen64Fn HookFopen64Delegate = HookFopen64;
+    private static readonly VfprintfFn HookVfprintfDelegate = HookVfprintf;
+    private static readonly VfprintfChkFn HookVfprintfChkDelegate = HookVfprintfChk;
+    private static readonly Dup2Fn HookDup2Delegate = HookDup2;
     
     private static bool _foundPlayerLogsStream;
     private static nint _streamPlayerLogs = IntPtr.Zero;
@@ -27,10 +32,10 @@ internal static class LinuxPlayerLogsMirroring
     {
         PltHook.InstallHooks(
         [
-            ("fopen64", Marshal.GetFunctionPointerForDelegate<Fopen64Fn>(HookFopen64)),
-            ("vfprintf", Marshal.GetFunctionPointerForDelegate<VfprintfFn>(HookVfprintf)),
-            ("__vfprintf_chk", Marshal.GetFunctionPointerForDelegate<VfprintfChkFn>(HookVfprintfChk)),
-            ("dup2", Marshal.GetFunctionPointerForDelegate<Dup2Fn>(HookDup2))
+            ("fopen64", Marshal.GetFunctionPointerForDelegate(HookFopen64Delegate)),
+            ("vfprintf", Marshal.GetFunctionPointerForDelegate(HookVfprintfDelegate)),
+            ("__vfprintf_chk", Marshal.GetFunctionPointerForDelegate(HookVfprintfChkDelegate)),
+            ("dup2", Marshal.GetFunctionPointerForDelegate(HookDup2Delegate))
         ]);
     }
 
