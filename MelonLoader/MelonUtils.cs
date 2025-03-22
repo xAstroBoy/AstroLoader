@@ -107,6 +107,23 @@ namespace MelonLoader
         public static bool IsWindows => GetPlatform is PlatformID.Win32NT or PlatformID.Win32S or PlatformID.Win32Windows or PlatformID.WinCE;
         public static bool IsMac => GetPlatform is PlatformID.MacOSX;
 
+        public static string GetPathAncestor(string path, int parentLevel)
+        {
+            if (parentLevel <= 0)
+                return path;
+
+            string lastValidPath = path;
+            for (int i = 0; i < parentLevel; i++)
+            {
+                string parentPath = Path.GetDirectoryName(lastValidPath);
+                if (parentPath is null)
+                    return lastValidPath;
+                lastValidPath = parentPath;
+            }
+
+            return lastValidPath;
+        }
+
         public static void SetCurrentDomainBaseDirectory(string dirpath, AppDomain domain = null)
         {
             if(MelonEnvironment.IsDotnetRuntime)
@@ -489,8 +506,17 @@ namespace MelonLoader
 
         public static bool IsGameIl2Cpp() => Directory.Exists(MelonEnvironment.Il2CppDataDirectory);
 
-        public static bool IsOldMono() => File.Exists(MelonEnvironment.UnityGameDataDirectory + "\\Mono\\mono.dll") || 
-                                          File.Exists(MelonEnvironment.UnityGameDataDirectory + "\\Mono\\libmono.so");
+        public static bool IsOldMono()
+        {
+#if OSX
+            string frameworksPath = Path.Combine(MelonEnvironment.GameExecutablePath, "Contents/Frameworks");
+            var libs = Directory.GetFiles(frameworksPath, "*.dylib", SearchOption.AllDirectories);
+            return libs.Select(Path.GetFileName).Contains("libmono.0.dylib");
+#else
+            return File.Exists(MelonEnvironment.UnityGameDataDirectory + "\\Mono\\mono.dll") || 
+                   File.Exists(MelonEnvironment.UnityGameDataDirectory + "\\Mono\\libmono.so");
+#endif
+        }
 
         public static bool IsUnderWineOrSteamProton() => WineGetVersion is not null;
 

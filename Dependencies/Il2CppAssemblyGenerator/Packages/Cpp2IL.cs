@@ -62,7 +62,11 @@ namespace MelonLoader.Il2CppAssemblyGenerator.Packages
                 MelonDebug.IsEnabled() ? "--verbose" : string.Empty,
 
                 "--game-path",
+#if OSX
+                "\"" + MelonUtils.GetPathAncestor(Core.GameAssemblyPath, 3) + "\"",
+#else
                 "\"" + Path.GetDirectoryName(Core.GameAssemblyPath) + "\"",
+#endif
 
                 "--exe-name",
                 "\"" + Process.GetCurrentProcess().ProcessName + "\"",
