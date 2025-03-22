@@ -1,6 +1,3 @@
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Runtime.InteropServices;
 using Tomlet.Attributes;
 
@@ -30,7 +27,7 @@ public class LoaderConfig
     public class CoreConfig
     {
         [TomlNonSerialized]
-        public string BaseDirectory { get; internal set; } = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule!.FileName)!;
+        public string BaseDirectory { get; internal set; } = null!;
 
         // Technically, this will always return false, but it's still a config ¯\_(ツ)_/¯
         [TomlProperty("disable")]
