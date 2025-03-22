@@ -15,6 +15,14 @@
     <PropertyGroup Condition="'$(RuntimeIdentifier.StartsWith(`linux-`))' == 'true'">
         <ExportsFile>linuxexports.def</ExportsFile>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(RuntimeIdentifier.StartsWith(`osx-`))' == 'true'">
+        <ExportsFile>osxexports.def</ExportsFile>
+        <OSXEntryPath>Deps/$(RuntimeIdentifier)/osxentry.o</OSXEntryPath>
+    </PropertyGroup>
+    
+    <Target Condition="'$(RuntimeIdentifier.StartsWith(`osx-`))' == 'true'" Name="BuildOSXEntry" BeforeTargets="Build">
+        <Exec Command="g++ -c -O2 -fPIC OSXEntry/osxentry.cpp -o $(OSXEntryPath)" />
+    </Target>
 
     <ItemGroup Condition="'$(RuntimeIdentifier.StartsWith(`win-`))' == 'true'">
         <LinkerArg Include="/DEF:Exports.def" />
@@ -62,6 +70,10 @@
         <Compile Include="$(SolutionDir)/MelonLoader/LoaderConfig.cs" />
     </ItemGroup>
 
+    <ItemGroup Condition="'$(RuntimeIdentifier.StartsWith(`osx-`))' == 'true'">
+        <NativeLibrary Include="$(OSXEntryPath)" />
+    </ItemGroup>
+    
     <ItemGroup>
         <NativeLibrary Include="$(AppHostPath)" />
         <NativeLibrary Include="Deps/$(RuntimeIdentifier)/$(LibPrefix)dobby$(LibExt)" />
@@ -78,8 +90,9 @@
                           Overwrite="true"/>
     </Target>
 
+    <Target Name="PublishAsBuildAfterTarget" AfterTargets="Build" DependsOnTargets="Publish" />
+
     <Target Condition="'$(RuntimeIdentifier.StartsWith(`win-`))' == 'true'" Name="RenameBinary" AfterTargets="Build">
         <Move SourceFiles="$(PublishDir)/$(TargetName).dll" DestinationFiles="$(PublishDir)/version.dll" />
     </Target>
-
 </Project>
