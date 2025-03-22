@@ -14,10 +14,12 @@
 
     <PropertyGroup Condition="'$(RuntimeIdentifier.StartsWith(`linux-`))' == 'true'">
         <ExportsFile>linuxexports.def</ExportsFile>
+        <LinkStandardCPlusPlusLibrary>true</LinkStandardCPlusPlusLibrary>
     </PropertyGroup>
     <PropertyGroup Condition="'$(RuntimeIdentifier.StartsWith(`osx-`))' == 'true'">
         <ExportsFile>osxexports.def</ExportsFile>
         <OSXEntryPath>Deps/$(RuntimeIdentifier)/osxentry.o</OSXEntryPath>
+        <LinkStandardCPlusPlusLibrary>true</LinkStandardCPlusPlusLibrary>
     </PropertyGroup>
     
     <Target Condition="'$(RuntimeIdentifier.StartsWith(`osx-`))' == 'true'" Name="BuildOSXEntry" BeforeTargets="Build">
@@ -26,14 +28,6 @@
 
     <ItemGroup Condition="'$(RuntimeIdentifier.StartsWith(`win-`))' == 'true'">
         <LinkerArg Include="/DEF:Exports.def" />
-    </ItemGroup>
-
-    <!-- This is needed by libnethost.a, not doing this will result in a runtime crash on boot -->
-    <ItemGroup Condition="'$(RuntimeIdentifier.StartsWith(`linux-`))' == 'true'">
-        <LinkerArg Include="-Wl,-lstdc++" Visible="false" />
-    </ItemGroup>
-    <ItemGroup Condition="'$(RuntimeIdentifier.StartsWith(`osx-`))' == 'true'">
-        <LinkerArg Include="-Wl,-lc++" Visible="false" />
     </ItemGroup>
 
     <PropertyGroup Condition="'$(Configuration)' != 'Debug'">
