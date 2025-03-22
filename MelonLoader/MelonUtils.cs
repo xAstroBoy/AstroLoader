@@ -101,11 +101,29 @@ namespace MelonLoader
         //     return builder.ToString();
         // }
 
-        public static PlatformID GetPlatform => Environment.OSVersion.Platform;
+        public static PlatformID GetPlatform =>
+#if !NET6_0_OR_GREATER
+            Environment.OSVersion.Platform;
+#else
+            GetPlatformFromRuntimeInformation();
+#endif
 
         public static bool IsUnix => GetPlatform is PlatformID.Unix;
         public static bool IsWindows => GetPlatform is PlatformID.Win32NT or PlatformID.Win32S or PlatformID.Win32Windows or PlatformID.WinCE;
         public static bool IsMac => GetPlatform is PlatformID.MacOSX;
+
+#if NET6_0_OR_GREATER
+        private static PlatformID GetPlatformFromRuntimeInformation()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return PlatformID.Win32NT;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return PlatformID.MacOSX;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return PlatformID.Unix;
+            return Environment.OSVersion.Platform;
+        }
+#endif
 
         public static string GetPathAncestor(string path, int parentLevel)
         {
