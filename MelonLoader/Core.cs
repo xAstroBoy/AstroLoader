@@ -127,8 +127,15 @@ namespace MelonLoader
 
             if (LoaderConfig.Current.Loader.LaunchDebugger && MelonEnvironment.IsDotnetRuntime)
             {
+#if WINDOWS
                 MelonLogger.Msg("[Init] User requested debugger, attempting to launch now...");
                 Debugger.Launch();
+#else
+                MelonLogger.Msg("[Init] User requested to wait until a debugger is attached, waiting now...");
+                while (!Debugger.IsAttached)
+                { }
+                MelonLogger.Msg("[Init] Detected a debugger, resuming initialization...");
+#endif
             }
 
             Environment.SetEnvironmentVariable("IL2CPP_INTEROP_DATABASES_LOCATION", MelonEnvironment.Il2CppAssembliesDirectory);
