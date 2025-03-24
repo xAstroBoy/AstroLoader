@@ -141,7 +141,7 @@ harmony_log_level = "Warn"
 force_quit = false
 # Disables the start screen. Equivalent to the '--melonloader.disablestartscreen' launch option
 disable_start_screen = false
-# Starts the dotnet debugger on Windows or wait until one is attached on other OSes (only for Il2Cpp games). Equivalent to the '--melonloader.launchdebugger' launch option
+# Starts the dotnet debugger on Windows and wait it is attached or just wait until one is attached without launch on other OSes (only for Il2Cpp games). Equivalent to the '--melonloader.launchdebugger' launch option
 launch_debugger = false
 # Sets the loader theme. Currently, the only available themes are "Normal" and "Lemon". Equivalent to the '--melonloader.consolemode' launch option (0 for Normal, 4 for Lemon)
 theme = "Normal"
