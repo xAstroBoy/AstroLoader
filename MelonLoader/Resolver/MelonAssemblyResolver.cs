@@ -45,27 +45,27 @@ namespace MelonLoader.Resolver
 
         private static void OverrideBaseAssembly()
         {
-            Assembly base_assembly = typeof(MelonAssemblyResolver).Assembly;
-            GetAssemblyResolveInfo(base_assembly.GetName().Name).Override = base_assembly;
-            GetAssemblyResolveInfo("MelonLoader").Override = base_assembly;
-            GetAssemblyResolveInfo("MelonLoader.ModHandler").Override = base_assembly;
+            Assembly baseAssembly = typeof(MelonAssemblyResolver).Assembly;
+            GetAssemblyResolveInfo(baseAssembly.GetName().Name).Override = baseAssembly;
+            GetAssemblyResolveInfo("MelonLoader").Override = baseAssembly;
+            GetAssemblyResolveInfo("MelonLoader.ModHandler").Override = baseAssembly;
         }
 
         private static void ForceResolveRuntime(params string[] fileNames)
         {
-            foreach (string fileName in fileNames)
+            foreach (var fileName in fileNames)
             {
-                string filePath = Path.Combine(MelonEnvironment.OurRuntimeDirectory, fileName);
+                var filePath = Path.Combine(MelonEnvironment.OurRuntimeDirectory, fileName);
                 if (!File.Exists(filePath))
                     return;
 
-                Assembly assembly = null;
+                Assembly assembly;
                 try
                 {
 #if NET6_0_OR_GREATER
                     assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(filePath);
 #else
-                assembly = Assembly.LoadFrom(filePath);
+                    assembly = Assembly.LoadFrom(filePath);
 #endif
                 }
                 catch { assembly = null; }
@@ -81,13 +81,13 @@ namespace MelonLoader.Resolver
 
         public static void AddSearchDirectories(params string[] directories)
         {
-            foreach (string directory in directories)
+            foreach (var directory in directories)
                 AddSearchDirectory(directory);
         }
 
         public static void AddSearchDirectories(int priority, params string[] directories)
         {
-            foreach (string directory in directories)
+            foreach (var directory in directories)
                 AddSearchDirectory(directory, priority);
         }
 
@@ -129,11 +129,8 @@ namespace MelonLoader.Resolver
         internal static Assembly SafeInvoke_OnAssemblyResolve(string name, Version version)
         {
 #if NET6_0_OR_GREATER
-
             return OnAssemblyResolve?.Invoke(name, version);
-
 #else
-
             // Backwards Compatibility
 #pragma warning disable CS0612 // Type or member is obsolete
             var assembly = InvokeObsoleteOnAssemblyResolve(name, version);
@@ -142,7 +139,6 @@ namespace MelonLoader.Resolver
             if (assembly == null)
                 assembly = OnAssemblyResolve?.Invoke(name, version);
             return assembly;
-
 #endif
         }
 
