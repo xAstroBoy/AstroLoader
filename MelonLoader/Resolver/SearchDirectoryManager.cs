@@ -5,10 +5,6 @@ using System.Reflection;
 
 #if NET6_0_OR_GREATER
 using System.Runtime.Loader;
-#else
-using System;
-using System.Runtime.InteropServices;
-using MelonLoader.Utils;
 #endif
 
 namespace MelonLoader.Resolver
@@ -85,27 +81,9 @@ namespace MelonLoader.Resolver
                 MelonDebug.Msg($"[MelonAssemblyResolver] Loading from {filepath}...");
 
 #if NET6_0_OR_GREATER
-
                 return AssemblyLoadContext.Default.LoadFromAssemblyPath(filepath);
-
 #else
-                IntPtr filePathPtr = Marshal.StringToHGlobalAnsi(filepath);
-                if (filePathPtr == IntPtr.Zero)
-                    continue;
-
-                IntPtr rootPtr = InternalUtils.BootstrapInterop.Library.MonoGetDomainPtr();
-                if (rootPtr == IntPtr.Zero)
-                    continue;
-
-                IntPtr assemblyPtr = MonoLibrary.Instance.mono_assembly_open_full(filePathPtr, IntPtr.Zero, false);
-                if (assemblyPtr == IntPtr.Zero)
-                    continue;
-
-                IntPtr assemblyReflectionPtr = MonoLibrary.Instance.mono_assembly_get_object(rootPtr, assemblyPtr);
-                if (assemblyReflectionPtr == IntPtr.Zero)
-                    continue;
-
-                return MonoLibrary.CastManagedAssemblyPtr(assemblyReflectionPtr);
+                return Assembly.LoadFrom(filepath);
 #endif
             }
 
