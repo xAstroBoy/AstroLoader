@@ -19,16 +19,7 @@ namespace MelonLoader.Resolver
                 return;
 
             // Setup Search Directories
-            AddSearchDirectories(
-                MelonEnvironment.UserLibsDirectory,
-                MelonEnvironment.PluginsDirectory,
-                MelonEnvironment.ModsDirectory,
-                (MelonUtils.IsGameIl2Cpp()
-                    ? MelonEnvironment.Il2CppAssembliesDirectory
-                    : MelonEnvironment.UnityGameManagedDirectory),
-                MelonEnvironment.OurRuntimeDirectory,
-                MelonEnvironment.MelonBaseDirectory,
-                MelonEnvironment.GameRootDirectory);
+            AddSearchDirectory(MelonEnvironment.OurRuntimeDirectory);
 
             // Setup Redirections
             OverrideBaseAssembly();
