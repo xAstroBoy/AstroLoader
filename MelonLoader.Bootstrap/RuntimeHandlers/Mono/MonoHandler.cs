@@ -56,7 +56,7 @@ internal static class MonoHandler
         uint newDataLen = (uint)newDataArray.Length;
         fixed (byte* newDataPtr = &newDataArray[0])
         {
-            var newReturn = Mono.ImageOpenFromDataWithName(newDataPtr, newDataLen, needCopy, ref status, refonly, name);
+            var newReturn = Mono.ImageOpenFromDataWithName(newDataPtr, newDataLen, needCopy, ref status, refonly, foundOverridenFile);
             return newReturn;
         }
     }
