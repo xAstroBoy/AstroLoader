@@ -60,23 +60,24 @@ namespace MelonLoader.Resolver
             Sort();
         }
 
-        internal static Assembly Scan(string requested_name)
+        internal static Assembly Scan(string requestedName)
         {
+            MelonDebug.Msg($"[MelonAssemblyResolver] Attempting to find {requestedName}");
             LemonEnumerator<SearchDirectoryInfo> enumerator = new LemonEnumerator<SearchDirectoryInfo>(SearchDirectoryList);
             while (enumerator.MoveNext())
             {
-                string folderpath = enumerator.Current.Path;
-                if (folderpath.ContainsExtension()
-                    || !Directory.Exists(folderpath))
+                string folderPath = enumerator.Current?.Path;
+                if (folderPath.ContainsExtension() || !Directory.Exists(folderPath))
                     continue;
 
-                string filepath = Directory.GetFiles(folderpath).Where(x =>
-                    (!string.IsNullOrEmpty(x)
-                        && ((Path.GetExtension(x).ToLowerInvariant().Equals(".dll")
-                            && Path.GetFileName(x).Equals($"{requested_name}.dll"))
-                        || (Path.GetExtension(x).ToLowerInvariant().Equals(".exe")
-                            && Path.GetFileName(x).Equals($"{requested_name}.exe"))))
-                ).FirstOrDefault();
+                MelonDebug.Msg($"Searching directory {folderPath}");
+                string filepath = 
+                    Directory.GetFiles(folderPath)
+                        .FirstOrDefault(x => !string.IsNullOrEmpty(x) &&
+                                             ((Path.GetExtension(x).ToLowerInvariant().Equals(".dll")
+                                               && Path.GetFileName(x).Equals($"{requestedName}.dll"))
+                                              || (Path.GetExtension(x).ToLowerInvariant().Equals(".exe")
+                                                  && Path.GetFileName(x).Equals($"{requestedName}.exe"))));
 
                 if (string.IsNullOrEmpty(filepath))
                     continue;
@@ -108,7 +109,7 @@ namespace MelonLoader.Resolver
 #endif
             }
 
-            MelonDebug.Msg($"[MelonAssemblyResolver] Failed to find {requested_name} in any of the known search directories");
+            MelonDebug.Msg($"[MelonAssemblyResolver] Failed to find {requestedName} in any of the known search directories");
             return null;
         }
 

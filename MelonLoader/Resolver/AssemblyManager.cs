@@ -10,9 +10,9 @@ using System.Runtime.Loader;
 
 namespace MelonLoader.Resolver
 {
-    internal class AssemblyManager
+    internal static class AssemblyManager
     {
-        internal static Dictionary<string, AssemblyResolveInfo> InfoDict = new Dictionary<string, AssemblyResolveInfo>();
+        private static readonly Dictionary<string, AssemblyResolveInfo> InfoDict = new();
 
         internal static bool Setup()
         {
@@ -27,11 +27,13 @@ namespace MelonLoader.Resolver
 
         internal static AssemblyResolveInfo GetInfo(string name)
         {
-            if (InfoDict.TryGetValue(name, out AssemblyResolveInfo resolveInfo))
-                return resolveInfo;
             lock (InfoDict)
+            {
+                if (InfoDict.TryGetValue(name, out AssemblyResolveInfo resolveInfo))
+                    return resolveInfo;
                 InfoDict[name] = new AssemblyResolveInfo();
-            return InfoDict[name];
+                return InfoDict[name];
+            }
         }
 
         private static Assembly Resolve(string requested_name, Version requested_version, bool is_preload)
