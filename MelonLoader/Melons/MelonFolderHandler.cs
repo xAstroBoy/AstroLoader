@@ -143,43 +143,16 @@ namespace MelonLoader.Melons
                 if (!Directory.Exists(dir))
                     continue;
 
-                // Check for Deeper UserLibs
-                string userLibsPath = Path.Combine(dir, "UserLibs");
-                if (Directory.Exists(userLibsPath))
+                List<string> dirList = scanType switch
                 {
-                    userLibDirectories.Add(userLibsPath);
-                    ScanFolder(eScanType.UserLibs, userLibsPath, ref userLibDirectories, ref pluginDirectories, ref modDirectories);
-                }
+                    ScanType.UserLibs => userLibDirectories,
+                    ScanType.Plugins => pluginDirectories,
+                    ScanType.Mods => modDirectories,
+                    _ => throw new ArgumentOutOfRangeException(nameof(scanType), scanType, null)
+                };
 
-                // Is UserLibs Scan?
-                if (scanType == eScanType.UserLibs)
-                    userLibDirectories.Add(dir); // Add to Directories List
-                else
-                {
-                    // Check for Deeper Melon Folder
-                    string melonPath = Path.Combine(dir, "Plugins");
-                    if (Directory.Exists(melonPath))
-                    {
-                        pluginDirectories.Add(melonPath);
-                        ScanFolder(eScanType.Plugins, melonPath, ref userLibDirectories, ref pluginDirectories, ref modDirectories);
-                    }
-
-                    if (scanType == eScanType.Mods)
-                    {
-                        melonPath = Path.Combine(dir, "Mods");
-                        if (Directory.Exists(melonPath))
-                        {
-                            modDirectories.Add(melonPath);
-                            ScanFolder(scanType, melonPath, ref userLibDirectories, ref pluginDirectories, ref modDirectories);
-                        }
-                    }
-
-                    // Add to Directories List
-                    if (scanType == eScanType.Mods)
-                        modDirectories.Add(dir);
-                    else
-                        pluginDirectories.Add(dir);
-                }
+                dirList.Add(dir);
+                ScanFolder(scanType, dir, ref userLibDirectories, ref pluginDirectories, ref modDirectories);
             }
         }
     }
