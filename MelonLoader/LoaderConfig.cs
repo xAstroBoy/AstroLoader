@@ -58,7 +58,7 @@ public class LoaderConfig
         public bool DisableStartScreen { get; internal set; }
 
         [TomlProperty("launch_debugger")]
-        [TomlPrecedingComment("Starts the dotnet debugger (only for Il2Cpp games). Equivalent to the '--melonloader.launchdebugger' launch option")]
+        [TomlPrecedingComment("Starts the dotnet debugger on Windows and wait it is attached or just wait until one is attached without launch on other OSes (only for Il2Cpp games). Equivalent to the '--melonloader.launchdebugger' launch option")]
         public bool LaunchDebugger { get; internal set; }
 
         [TomlProperty("theme")]
