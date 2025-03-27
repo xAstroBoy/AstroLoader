@@ -1,4 +1,5 @@
-﻿using MelonLoader.Logging;
+using System.Diagnostics;
+using MelonLoader.Logging;
 using MelonLoader.Bootstrap.RuntimeHandlers.Il2Cpp;
 using MelonLoader.Bootstrap.RuntimeHandlers.Mono;
 using MelonLoader.Bootstrap.Utils;
@@ -11,7 +12,7 @@ namespace MelonLoader.Bootstrap;
 
 public static class Core
 {
-#if LINUX
+#if LINUX || OSX
     [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
     private delegate nint DlsymFn(nint handle, string symbol);
     private static readonly DlsymFn HookDlsymDelegate = HookDlsym;
@@ -39,7 +40,11 @@ public static class Core
         var exePath = Environment.ProcessPath!;
         GameDir = Path.GetDirectoryName(exePath)!;
 
+#if !OSX
         DataDir = Path.Combine(GameDir, Path.GetFileNameWithoutExtension(exePath) + "_Data");
+#else
+        DataDir = Path.Combine(Path.GetDirectoryName(GameDir)!, "Resources", "Data");
+#endif
         if (!Directory.Exists(DataDir))
             return;
 
@@ -50,7 +55,7 @@ public static class Core
 
         MelonLogger.Init();
 
-#if LINUX
+#if LINUX || OSX
         PltHook.InstallHooks
         ([
             ("dlsym", Marshal.GetFunctionPointerForDelegate(HookDlsymDelegate))
@@ -94,7 +99,7 @@ public static class Core
         return redirect.detourPtr;
     }
 
-#if LINUX
+#if LINUX || OSX
     private static nint HookDlsym(nint handle, string symbol)
     {
         nint originalSymbolAddress = LibcNative.Dlsym(handle, symbol);
@@ -113,7 +118,17 @@ public static class Core
     private static void InitConfig()
     {
         var customBaseDir = ArgParser.GetValue("melonloader.basedir");
-        var baseDir = Directory.Exists(customBaseDir) ? Path.GetFullPath(customBaseDir) : LoaderConfig.Current.Loader.BaseDirectory;
+        var baseDir = 
+#if OSX
+            Path.GetDirectoryName(
+                Path.GetDirectoryName(
+                    Path.GetDirectoryName(
+                        Path.GetDirectoryName(Process.GetCurrentProcess().MainModule!.FileName)!))!)!;
+#else
+            Path.GetDirectoryName(Process.GetCurrentProcess().MainModule!.FileName)!;
+#endif
+        if (Directory.Exists(customBaseDir))
+            baseDir = Path.GetFullPath(customBaseDir);
 
         var path = Path.Combine(baseDir, "UserData", "Loader.cfg");
 
@@ -189,7 +204,7 @@ public static class Core
 
         if (uint.TryParse(ArgParser.GetValue("melonloader.debugport"), out var debugPort))
             LoaderConfig.Current.MonoDebugServer.DebugPort = debugPort;
-        
+
         var unityVersionOverride = ArgParser.GetValue("melonloader.unityversion");
         if (unityVersionOverride != null)
             LoaderConfig.Current.UnityEngine.VersionOverride = unityVersionOverride;

@@ -113,7 +113,7 @@ internal static class MelonLogger
 
         if (LoaderConfig.Current.Loader.CapturePlayerLogs)
         {
-#if LINUX
+#if LINUX || OSX
             LinuxPlayerLogsMirroring.SetupPlayerLogMirroring();
 #endif
 #if WINDOWS

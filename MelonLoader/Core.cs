@@ -115,8 +115,26 @@ namespace MelonLoader
             Fixes.ServerCertificateValidation.Install();
 #endif
 
-
             Assertions.LemonAssertMapping.Setup();
+            HarmonyLogger.Setup();
+
+#if !WINDOWS && !NET6_0_OR_GREATER
+            // Using Process.Start can run Console..cctor
+            // Since MonoMod's PlatformHelper (used by DetourHelper.Native) runs Process.Start to determine ARM/x86
+            // platform, this causes the unpatched TermInfoReader to kick in before it can be patched and fixed when
+            // installing the XTermFix below. To work around this, we can force the platform directly
+            DetourHelper.Native = new DetourNativeMonoPosixPlatform(new DetourNativeX86Platform());
+#endif
+
+            HarmonyInstance = new HarmonyLib.Harmony(BuildInfo.Name);
+
+#if !WINDOWS && !NET6_0_OR_GREATER
+            Fixes.XTermFix.Install();
+#endif
+
+#if OSX
+            Fixes.ProcessModulesFix.Install();
+#endif
 
             MelonUtils.Setup(AppDomain.CurrentDomain);
             MelonAssemblyResolver.Setup();
@@ -152,22 +170,6 @@ namespace MelonLoader
 
 #endif
 
-            HarmonyLogger.Setup();
-
-#if !WINDOWS && !NET6_0_OR_GREATER
-            // Using Process.Start can run Console..cctor
-            // Since MonoMod's PlatformHelper (used by DetourHelper.Native) runs Process.Start to determine ARM/x86
-            // platform, this causes the unpatched TermInfoReader to kick in before it can be patched and fixed when
-            // installing the XTermFix below. To work around this, we can force the platform directly
-            DetourHelper.Native = new DetourNativeMonoPosixPlatform(new DetourNativeX86Platform());
-#endif
-
-            HarmonyInstance = new HarmonyLib.Harmony(BuildInfo.Name);
-
-#if !WINDOWS && !NET6_0_OR_GREATER
-            Fixes.XTermFix.Install();
-#endif
-
             Fixes.DetourContextDisposeFix.Install();
 
 #if NET6_0_OR_GREATER
@@ -186,6 +188,9 @@ namespace MelonLoader
             Fixes.AsmResolverFix.Install();
             Fixes.Il2CppInteropFixes.Install();
             Fixes.Il2CppICallInjector.Install();
+#if OSX
+            Fixes.NativeLibraryFix.Install();
+#endif
 #endif
 
             PatchShield.Install();
