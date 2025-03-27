@@ -1,6 +1,3 @@
-﻿using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Runtime.InteropServices;
 using Tomlet.Attributes;
 
@@ -19,7 +16,7 @@ public class LoaderConfig
 
     [TomlProperty("logs")]
     public LogsConfig Logs { get; internal set; } = new();
-    
+
     [TomlProperty("mono_debug_server")]
     public MonoDebugServerConfig MonoDebugServer { get; internal set; } = new();
 
@@ -30,7 +27,7 @@ public class LoaderConfig
     public class CoreConfig
     {
         [TomlNonSerialized]
-        public string BaseDirectory { get; internal set; } = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule!.FileName)!;
+        public string BaseDirectory { get; internal set; } = null!;
 
         // Technically, this will always return false, but it's still a config ¯\_(ツ)_/¯
         [TomlProperty("disable")]
@@ -139,7 +136,7 @@ public class LoaderConfig
         private const string MonoPathSeparatorDescription =
 #if WINDOWS
             "semicolon (;)";
-#elif LINUX
+#elif LINUX || OSX
             "colon (:)";
 #endif
 
