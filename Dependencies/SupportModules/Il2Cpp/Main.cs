@@ -64,7 +64,6 @@ namespace MelonLoader.Support
 
             MonoEnumeratorWrapper.Register();
 
-            ClassInjector.RegisterTypeInIl2Cpp<SM_Component>();
             SM_Component.Create();
 
             Interop = new InteropInterface();
