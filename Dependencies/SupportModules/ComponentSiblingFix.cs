@@ -16,10 +16,12 @@ namespace MelonLoader.Support
 
 #if SM_Il2Cpp
         private delegate bool SetAsLastSiblingDelegate(IntPtr transformptr);
-        private static SetAsLastSiblingDelegate _method;
 #else
-        private static MethodInfo _method;
+        private static MethodInfo _methodInfo;
+        private delegate void SetAsLastSiblingDelegate(Transform obj);
 #endif
+
+        private static SetAsLastSiblingDelegate _method;
 
         internal static void SetAsLastSibling(Component obj)
         {
@@ -46,11 +48,13 @@ namespace MelonLoader.Support
                 if (_method == null)
                     throw new Exception("Unable to find Internal Call for UnityEngine.Transform::SetAsLastSibling");
 #else
-                _method = typeof(Transform).GetMethods(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault(x => (
+                _methodInfo = typeof(Transform).GetMethods(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault(x => (
                     (x.Name == nameof(SetAsLastSibling))
                     && (x.GetParameters().Count() == 0)));
-                if (_method == null)
+                if (_methodInfo == null)
                     throw new Exception("Unable to find Method for UnityEngine.Transform::SetAsLastSibling");
+
+                _method = (SetAsLastSiblingDelegate)Delegate.CreateDelegate(typeof(SetAsLastSiblingDelegate), _methodInfo);
 #endif
             }
             catch (Exception ex)
@@ -73,8 +77,8 @@ namespace MelonLoader.Support
                 _method(IL2CPP.Il2CppObjectBaseToPtrNotNull(obj.transform));
                 _method(IL2CPP.Il2CppObjectBaseToPtrNotNull(obj.gameObject.transform));
 #else
-                _method.Invoke(obj.transform, null);
-                _method.Invoke(obj.gameObject.transform, null);
+                _method(obj.transform);
+                _method(obj.gameObject.transform);
 #endif
             }
             catch (Exception ex)
