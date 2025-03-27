@@ -91,22 +91,25 @@ internal static class Exports
 
         string[] ldPreloads = Environment.GetEnvironmentVariable(LdPreloadEnvName)!.Split(":");
         string newLdPreload = string.Join(':', ldPreloads.Where(x => x != $"{CurrentAssemblyName}.{LibExtension}"));
-        string[] ldLibraryPaths = Environment.GetEnvironmentVariable(LdPathEnvName)!.Split(":");
+        string[]? ldLibraryPaths = Environment.GetEnvironmentVariable(LdPathEnvName)?.Split(":");
 
-        string expectedLibFullPath =
+        // It's possible to hook without a library path set so we only remove ourselves if the variable had a value
+        if (ldLibraryPaths is not null && ldLibraryPaths.Length > 0)
+        {
+            string expectedLibFullPath =
 #if OSX
             Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(ProcessDirectory)))!;
 #else
-            ProcessDirectory;
+                ProcessDirectory;
 #endif
 
-        string newLibraryPath = string.Join(':', ldLibraryPaths
-            .Where(x => expectedLibFullPath != Path.TrimEndingDirectorySeparator(Path.GetFullPath(x))));
-
+            string newLibraryPath = string.Join(':', ldLibraryPaths
+                .Where(x => expectedLibFullPath != Path.TrimEndingDirectorySeparator(Path.GetFullPath(x))));
+            LibcNative.Setenv(LdPathEnvName, newLibraryPath, true);
+            Environment.SetEnvironmentVariable(LdPathEnvName, newLibraryPath);
+        }
         LibcNative.Setenv(LdPreloadEnvName, newLdPreload, true);
-        LibcNative.Setenv(LdPathEnvName, newLibraryPath, true);
         Environment.SetEnvironmentVariable(LdPreloadEnvName, newLdPreload);
-        Environment.SetEnvironmentVariable(LdPathEnvName, newLibraryPath);
     }
     
 #if OSX
