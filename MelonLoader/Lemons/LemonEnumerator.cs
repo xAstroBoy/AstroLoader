@@ -25,20 +25,6 @@ namespace MelonLoader
         object IEnumerator.Current => Current;
         public T Current { get; private set; }
 
-        public bool Peek(out T next)
-        {
-            if ((LemonPatch == null)
-                   || (LemonPatch.Length <= 0)
-                   || (NextLemon >= LemonPatch.Length))
-            {
-                next = Current;
-                return false;
-            }
-
-            next = LemonPatch[NextLemon];
-            return true;
-        }
-
         bool IEnumerator.MoveNext() => MoveNext();
         public bool MoveNext()
         {

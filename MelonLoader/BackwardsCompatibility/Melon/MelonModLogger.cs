@@ -2,6 +2,6 @@
 
 namespace MelonLoader
 {
-    [Obsolete("MelonLoader.MelonModLogger is Only Here for Compatibility Reasons. Please use MelonLoader.MelonLogger instead. This will be removed in a future update.", true)]
+    [Obsolete("MelonLoader.MelonModLogger is Only Here for Compatibility Reasons. Please use MelonLoader.MelonLogger instead.")]
     public class MelonModLogger : MelonLogger { }
 }

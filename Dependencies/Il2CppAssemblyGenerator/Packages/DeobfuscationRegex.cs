@@ -6,7 +6,7 @@
 
         internal DeobfuscationRegex()
         {
-            Regex = LoaderConfig.Current.UnityEngine.ForceGeneratorRegex;
+            Regex = MelonLaunchOptions.Il2CppAssemblyGenerator.ForceRegex;
             if (string.IsNullOrEmpty(Regex))
                 Regex = RemoteAPI.Info.ObfuscationRegex;
         }

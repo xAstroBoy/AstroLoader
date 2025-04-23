@@ -337,7 +337,8 @@ namespace Semver
             var r = CompareByPrecedence(other);
             if (r != 0) return r;
 
-            return CompareComponent(Prerelease, other.Prerelease, true);
+            // If other is null, CompareByPrecedence() returns 1
+            return CompareComponent(Build, other.Build);
         }
 
         /// <summary>
@@ -474,6 +475,7 @@ namespace Semver
         /// </summary>
         /// <param name="info">The <see cref="SerializationInfo"/> to populate with data.</param>
         /// <param name="context">The destination (see <see cref="SerializationInfo"/>) for this serialization.</param>
+        [SecurityPermission(SecurityAction.Demand, SerializationFormatter = true)]
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             if (info == null) throw new ArgumentNullException(nameof(info));

@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Drawing;
-using MelonLoader.Utils;
+using System.Runtime.CompilerServices;
 
 namespace MelonLoader
 {
@@ -10,39 +9,37 @@ namespace MelonLoader
         {
             if (!IsEnabled())
                 return;
-            MelonLogger.PassLogMsg(MelonLogger.DefaultTextColor, obj.ToString(), Color.CornflowerBlue, "DEBUG");
-            MsgCallbackHandler?.Invoke(LoggerUtils.DrawingColorToConsoleColor(MelonLogger.DefaultTextColor), obj.ToString());
+            MelonLogger.Internal_Msg(ConsoleColor.Blue, MelonLogger.DefaultTextColor, "DEBUG", obj.ToString());
+            MsgCallbackHandler?.Invoke(MelonLogger.DefaultTextColor, obj.ToString());
         }
-
         public static void Msg(string txt)
         {
             if (!IsEnabled())
                 return;
-            MelonLogger.PassLogMsg(MelonLogger.DefaultTextColor, txt, Color.CornflowerBlue, "DEBUG");
-            MsgCallbackHandler?.Invoke(LoggerUtils.DrawingColorToConsoleColor(MelonLogger.DefaultTextColor), txt);
+            MelonLogger.Internal_Msg(ConsoleColor.Blue, MelonLogger.DefaultTextColor, "DEBUG", txt);
+            MsgCallbackHandler?.Invoke(MelonLogger.DefaultTextColor, txt);
         }
-
         public static void Msg(string txt, params object[] args)
         {
             if (!IsEnabled())
                 return;
-            MelonLogger.PassLogMsg(MelonLogger.DefaultTextColor, string.Format(txt, args), Color.CornflowerBlue, "DEBUG");
-            MsgCallbackHandler?.Invoke(LoggerUtils.DrawingColorToConsoleColor(MelonLogger.DefaultTextColor), string.Format(txt, args));
+            MelonLogger.Internal_Msg(ConsoleColor.Blue, MelonLogger.DefaultTextColor, "DEBUG", string.Format(txt, args));
+            MsgCallbackHandler?.Invoke(MelonLogger.DefaultTextColor, string.Format(txt, args));
         }
 
         public static void Error(string txt)
         {
             if (!IsEnabled())
                 return;
-            MelonLogger.PassLogError(txt, "DEBUG", false);
+            MelonLogger.Internal_Error("DEBUG", txt);
             ErrorCallbackHandler?.Invoke(txt);
         }
 
         public static event Action<ConsoleColor, string> MsgCallbackHandler;
-
         public static event Action<string> ErrorCallbackHandler;
+        //public static bool IsEnabled() => MelonLaunchOptions.Core.DebugMode;
 
-        public static bool IsEnabled()
-            => LoaderConfig.Current.Loader.DebugMode;
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        public extern static bool IsEnabled();
     }
 }
