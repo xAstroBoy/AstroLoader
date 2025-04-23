@@ -1,57 +1,38 @@
-﻿#if NET6_0_OR_GREATER
-
-using MelonLoader.Modules;
+﻿using MelonLoader.Modules;
 using System;
 using System.Diagnostics;
 using System.IO;
-using MelonLoader.Utils;
+using System.Runtime.CompilerServices;
 
 namespace MelonLoader.InternalUtils
 {
     internal static class Il2CppAssemblyGenerator
     {
-        private static readonly string modulePath = Path.Combine(MelonEnvironment.Il2CppAssemblyGeneratorDirectory, "Il2CppAssemblyGenerator.dll");
-        public static readonly MelonModule.Info moduleInfo = new MelonModule.Info(modulePath, () => !MelonUtils.IsGameIl2Cpp());
+        public static readonly MelonModule.Info moduleInfo = new MelonModule.Info(
+            $"MelonLoader{Path.DirectorySeparatorChar}Dependencies{Path.DirectorySeparatorChar}Il2CppAssemblyGenerator{Path.DirectorySeparatorChar}Il2CppAssemblyGenerator.dll"
+            , () => !MelonUtils.IsGameIl2Cpp());
 
         internal static bool Run()
         {
-            if (MelonEnvironment.IsMonoRuntime)
-                return true;
-
-            MelonLogger.MsgDirect("Loading Il2CppAssemblyGenerator...");
             var module = MelonModule.Load(moduleInfo);
             if (module == null)
-            {
-                if (File.Exists(modulePath))
-                    MelonLogger.Error("Failed to Load Il2CppAssemblyGenerator!");
-                else
-                    MelonLogger.Error("Il2CppAssemblyGenerator was Not Found!");
-                return false;
-            }
+                return true;
 
-            if (MelonUtils.IsWindows)
-            {
-                IntPtr windowHandle = Process.GetCurrentProcess().MainWindowHandle;
+            MelonLogger.Msg("Loading Il2CppAssemblyGenerator...");
 
-#if WINDOWS
-                BootstrapInterop.DisableCloseButton(windowHandle);
-#endif
-            }
+            MonoInternals.MonoResolveManager.GetAssemblyResolveInfo("Il2CppAssemblyGenerator").Override = module.Assembly;
 
+            IntPtr windowHandle = Process.GetCurrentProcess().MainWindowHandle;
+            DisableCloseButton(windowHandle);
             var ret = module.SendMessage("Run");
-            
-            if (MelonUtils.IsWindows)
-            {
-                IntPtr windowHandle = Process.GetCurrentProcess().MainWindowHandle;
-
-#if WINDOWS
-                BootstrapInterop.EnableCloseButton(windowHandle);
-#endif
-            }
-
-            return ret is 0;
+            EnableCloseButton(windowHandle);
+            MelonUtils.SetCurrentDomainBaseDirectory(MelonUtils.GameDirectory);
+            return ret is int retVal && retVal == 0;
         }
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private extern static void EnableCloseButton(IntPtr mainWindow);
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        private extern static void DisableCloseButton(IntPtr mainWindow);
     }
 }
-
-#endif

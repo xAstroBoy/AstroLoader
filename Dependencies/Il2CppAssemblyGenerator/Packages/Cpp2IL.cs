@@ -7,45 +7,22 @@ namespace MelonLoader.Il2CppAssemblyGenerator.Packages
 {
     internal class Cpp2IL : Models.ExecutablePackage
     {
-        internal static SemVersion NetCoreMinVersion = SemVersion.Parse("2022.1.0-pre-release.18");
-        internal SemVersion VersionSem;
-        private string BaseFolder;
-
-        private static string ReleaseName =>
-            MelonUtils.IsWindows ? "Windows" : MelonUtils.IsUnix ? "Linux" : "OSX";
-		
         internal Cpp2IL()
         {
-            Version = LoaderConfig.Current.UnityEngine.ForceIl2CppDumperVersion;
+            Version = MelonLaunchOptions.Il2CppAssemblyGenerator.ForceVersion_Dumper;
 #if !DEBUG
             if (string.IsNullOrEmpty(Version) || Version.Equals("0.0.0.0"))
                 Version = RemoteAPI.Info.ForceDumperVersion;
 #endif
             if (string.IsNullOrEmpty(Version) || Version.Equals("0.0.0.0"))
-                Version = $"2022.1.0-pre-release.19";
-            VersionSem = SemVersion.Parse(Version);
+                Version = "2022.1.0-pre-release.8";
 
             Name = nameof(Cpp2IL);
-            
-            var filename = Name;
-#if WINDOWS
-            filename += ".exe";
-#endif
-
-            BaseFolder = Path.Combine(Core.BasePath, Name);
-            Directory.CreateDirectory(BaseFolder);
-
-            FilePath =
-                ExeFilePath =
-                Destination =
-                Path.Combine(BaseFolder, filename);
-
-            OutputFolder = Path.Combine(BaseFolder, "cpp2il_out");
-
-            URL = $"https://github.com/SamboyCoding/{Name}/releases/download/{Version}/{Name}-{Version}-{ReleaseName}";
-#if WINDOWS
-            URL += ".exe";
-#endif
+            Destination = Path.Combine(Core.BasePath, Name);
+            OutputFolder = Path.Combine(Destination, "cpp2il_out");
+            URL = $"https://github.com/SamboyCoding/{Name}/releases/download/{Version}/{Name}-{Version}-Windows-Netframework472.zip";
+            ExeFilePath = Path.Combine(Destination, $"{Name}.exe");
+            FilePath = Path.Combine(Core.BasePath, $"{Name}_{Version}.zip");
         }
 
         internal override bool ShouldSetup() 
@@ -58,28 +35,53 @@ namespace MelonLoader.Il2CppAssemblyGenerator.Packages
             => Save(ref Config.Values.DumperVersion);
 
         internal override bool Execute()
-            => Execute([
-                MelonDebug.IsEnabled() ? "--verbose" : string.Empty,
+        {
+            if (SemVersion.Parse(Version) <= SemVersion.Parse("2022.0.999"))
+                return ExecuteOld();
+            return ExecuteNew();
+        }
 
+        private bool ExecuteNew()
+        {
+            if (Execute(new string[] {
+                MelonDebug.IsEnabled() ? "--verbose" : string.Empty,
                 "--game-path",
                 "\"" + Path.GetDirectoryName(Core.GameAssemblyPath) + "\"",
-
                 "--exe-name",
                 "\"" + Process.GetCurrentProcess().ProcessName + "\"",
 
-                "--output-as",
-                "dummydll",
-
                 "--use-processor",
-                "attributeanalyzer",
                 "attributeinjector",
-                LoaderConfig.Current.UnityEngine.EnableCpp2ILCallAnalyzer ? "callanalyzer" : string.Empty,
-                LoaderConfig.Current.UnityEngine.EnableCpp2ILNativeMethodDetector ? "nativemethoddetector" : string.Empty,
-                //"deobfmap",
-                //"stablenamer",
+                "--output-as",
+                "dummydll"
 
-            ], false, new Dictionary<string, string>() {
-                {"NO_COLOR", "1"},
-            });
+            }, false, new Dictionary<string, string>() {
+                {"NO_COLOR", "1"}
+            }))
+                return true;
+
+            return false;
+        }
+
+        private bool ExecuteOld()
+        {
+            if (Execute(new string[] {
+                MelonDebug.IsEnabled() ? "--verbose" : string.Empty,
+                "--game-path",
+                "\"" + Path.GetDirectoryName(Core.GameAssemblyPath) + "\"",
+                "--exe-name",
+                "\"" + Process.GetCurrentProcess().ProcessName + "\"",
+
+                "--skip-analysis",
+                "--skip-metadata-txts",
+                "--disable-registration-prompts"
+
+            }, false, new Dictionary<string, string>() {
+                {"NO_COLOR", "1"}
+            }))
+                return true;
+
+            return false;
+        }
     }
 }

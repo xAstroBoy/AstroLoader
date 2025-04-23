@@ -3,7 +3,7 @@ using System;
 
 namespace MelonLoader
 {
-    [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
+    [AttributeUsage(AttributeTargets.Assembly)]
     public class MelonInfoAttribute : Attribute
     {
         /// <summary>

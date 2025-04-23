@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using MelonLoader.Preferences;
 
@@ -33,11 +32,7 @@ namespace MelonLoader.Il2CppAssemblyGenerator
             public string DeobfuscationRegex = null;
             public string UnityVersion = "0.0.0.0";
             public string DumperVersion = "0.0.0.0";
-            public string DumperSCRSVersion = "0.0.0.0";
-
-            [Obsolete("Il2CppAssemblyUnhollower support was discontinued. This will be removed in a future update.", true)]
-            public bool UseInterop = true;
-
+            public string UnhollowerVersion = "0.0.0.0";
             public List<string> OldFiles = new List<string>();
         }
     }

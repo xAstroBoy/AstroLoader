@@ -3,11 +3,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
 using System.IO;
-using MelonLoader.Resolver;
-
-#if NET6_0_OR_GREATER
-using System.Runtime.Loader;
-#endif
 
 namespace MelonLoader.InternalUtils
 {
@@ -88,15 +83,10 @@ namespace MelonLoader.InternalUtils
                 {
                     if (nameLookup.TryGetValue(dependency.Name, out Vertex dependencyVertex))
                     {
-                        if (!melonVertex.dependencies.Contains(dependencyVertex))
-                            melonVertex.dependencies.Add(dependencyVertex);
-                        if (!dependencyVertex.dependents.Contains(melonVertex))
-                            dependencyVertex.dependents.Add(melonVertex);
+                        melonVertex.dependencies.Add(dependencyVertex);
+                        dependencyVertex.dependents.Add(melonVertex);
                     }
-                    else if (!TryLoad(dependency)
-                        && !TryResolve(dependency)
-                        && !optionalDependencies.Contains(dependency.Name)
-                        && !missingDependencies.Contains(dependency))
+                    else if (!TryLoad(dependency) && !optionalDependencies.Contains(dependency.Name))
                         missingDependencies.Add(dependency);
                 }
 
@@ -105,24 +95,18 @@ namespace MelonLoader.InternalUtils
                     AssemblyName dependency = new AssemblyName(dependencyName);
                     if (nameLookup.TryGetValue(dependencyName, out Vertex dependencyVertex))
                     {
-                        if (!melonVertex.dependencies.Contains(dependencyVertex))
-                            melonVertex.dependencies.Add(dependencyVertex);
-                        if (!dependencyVertex.dependents.Contains(melonVertex))
-                            dependencyVertex.dependents.Add(melonVertex);
+                        melonVertex.dependencies.Add(dependencyVertex);
+                        dependencyVertex.dependents.Add(melonVertex);
                     }
-                    else if (!TryLoad(dependency)
-                        && !TryResolve(dependency)
-                        && !missingDependencies.Contains(dependency))
+                    else if (!TryLoad(dependency))
                         missingDependencies.Add(dependency);
                 }
 
-                if ((missingDependencies.Count > 0) 
-                    && !melonsWithMissingDeps.ContainsKey(melonVertex.melon.Info.Name))
+                if (missingDependencies.Count > 0)
                     // melonVertex.skipLoading = true;
                     melonsWithMissingDeps.Add(melonVertex.melon.Info.Name, missingDependencies.ToArray());
 
-                if ((incompatibilities.Count > 0)
-                    && !melonsWithIncompatibilities.ContainsKey(melonVertex.melon.Info.Name))
+                if (incompatibilities.Count > 0)
                     melonsWithIncompatibilities.Add(melonVertex.melon.Info.Name, incompatibilities.ToArray());
             }
 
@@ -139,14 +123,7 @@ namespace MelonLoader.InternalUtils
         {
             try
             {
-#if NET6_0_OR_GREATER
-                var asm = AssemblyLoadContext.Default.LoadFromAssemblyName(assembly);
-#else
-                var asm = Assembly.Load(assembly);
-#endif
-
-                if (asm == null)
-                    return false;
+                Assembly.Load(assembly);
                 return true;
             }
             catch (FileNotFoundException) { return false; }
@@ -156,30 +133,12 @@ namespace MelonLoader.InternalUtils
                 return false;
             }
         }
-		
-		// Returns true if 'assembly' was already resolved or could be resolved, false if the required assembly was missing.
-        private static bool TryResolve(AssemblyName assembly)
-        {
-            try
-            {
-                Assembly asm = SearchDirectoryManager.Scan(assembly.Name);
-                if (asm == null)
-                    return false;
-                return true;
-            }
-            catch (FileNotFoundException) { return false; }
-            catch (Exception ex)
-            {
-                MelonLogger.Error("Resolving Melon Dependency Failed: " + ex);
-                return false;
-            }
-        }
 
         private static string BuildMissingDependencyMessage(IDictionary<string, IList<AssemblyName>> melonsWithMissingDeps)
         {
             StringBuilder messageBuilder = new StringBuilder("Some Melons are missing dependencies, which you may have to install.\n" +
                 "If these are optional dependencies, mark them as optional using the MelonOptionalDependencies attribute.\n" +
-                "This warning will turn into an error and Melons with missing dependencies will not be loaded in future versions of MelonLoader.\n");
+                "This warning will turn into an error and Melons with missing dependencies will not be loaded in the next version of MelonLoader.\n");
             foreach (string melonName in melonsWithMissingDeps.Keys)
             {
                 messageBuilder.Append($"- '{melonName}' is missing the following dependencies:\n");
@@ -219,8 +178,7 @@ namespace MelonLoader.InternalUtils
                 int dependencyCount = vertex.dependencies.Count;
 
                 unloadedDependencies[i] = dependencyCount;
-                if ((dependencyCount == 0) 
-                    && !loadableMelons.ContainsKey(vertex.name))
+                if (dependencyCount == 0)
                     loadableMelons.Add(vertex.name, vertex);
             }
 
@@ -230,8 +188,7 @@ namespace MelonLoader.InternalUtils
                 Vertex melon = loadableMelons.Values[0];
                 loadableMelons.RemoveAt(0);
 
-                if (!melon.skipLoading
-                    && !loadableMelons.ContainsKey(melon.name))
+                if (!melon.skipLoading)
                     loadedMelons.Add(melon.melon);
                 else
                     ++skippedMelons;
@@ -241,8 +198,7 @@ namespace MelonLoader.InternalUtils
                     unloadedDependencies[dependent.index] -= 1;
                     dependent.skipLoading |= melon.skipLoading;
 
-                    if ((unloadedDependencies[dependent.index] == 0)
-                        && !loadableMelons.ContainsKey(dependent.name))
+                    if (unloadedDependencies[dependent.index] == 0)
                         loadableMelons.Add(dependent.name, dependent);
                 }
             }

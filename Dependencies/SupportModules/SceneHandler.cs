@@ -5,8 +5,6 @@ using System.Collections.Generic;
 using UnityEngine.Events;
 #endif
 
-#pragma warning disable CA2013
-
 namespace MelonLoader.Support
 {
     internal static class SceneHandler

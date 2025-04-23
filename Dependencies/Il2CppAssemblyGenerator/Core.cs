@@ -1,10 +1,8 @@
-﻿using System.IO;
-using System.Net.Http;
+﻿using System;
+using System.IO;
+using System.Net;
 using MelonLoader.Il2CppAssemblyGenerator.Packages;
-using MelonLoader.Il2CppAssemblyGenerator.Packages.Models;
 using MelonLoader.Modules;
-using MelonLoader.Properties;
-using MelonLoader.Utils;
 
 namespace MelonLoader.Il2CppAssemblyGenerator
 {
@@ -14,12 +12,10 @@ namespace MelonLoader.Il2CppAssemblyGenerator
         internal static string GameAssemblyPath = null;
         internal static string ManagedPath = null;
 
-        internal static HttpClient webClient = null;
+        internal static WebClient webClient = null;
 
-        internal static ExecutablePackage cpp2il = null;
-        internal static Cpp2IL_StrippedCodeRegSupport cpp2il_scrs = null;
-
-        internal static Packages.Il2CppInterop il2cppinterop = null;
+        internal static Packages.Models.ExecutablePackage dumper = null;
+        internal static Il2CppAssemblyUnhollower il2cppassemblyunhollower = null;
         internal static UnityDependencies unitydependencies = null;
         internal static DeobfuscationMap deobfuscationMap = null;
         internal static DeobfuscationRegex deobfuscationRegex = null;
@@ -32,52 +28,43 @@ namespace MelonLoader.Il2CppAssemblyGenerator
         {
             Logger = LoggerInstance;
 
-            webClient = new();
-            webClient.DefaultRequestHeaders.Add("User-Agent", $"{BuildInfo.Name} v{BuildInfo.Version}");
+            webClient = new WebClient();
+            webClient.Headers.Add("User-Agent", $"{BuildInfo.Name} v{BuildInfo.Version}");
 
-            AssemblyGenerationNeeded = LoaderConfig.Current.UnityEngine.ForceRegeneration;
+            AssemblyGenerationNeeded = MelonLaunchOptions.Il2CppAssemblyGenerator.ForceRegeneration;
 
-            string gameAssemblyName = "GameAssembly";
-            if (MelonUtils.IsUnix)
-                gameAssemblyName += ".so"; 
-            if (MelonUtils.IsWindows)
-                gameAssemblyName += ".dll";
-            if (MelonUtils.IsMac)
-                gameAssemblyName += ".dylib";
+            GameAssemblyPath = Path.Combine(MelonUtils.GameDirectory, "GameAssembly.dll");
+            ManagedPath = string.Copy(MelonUtils.GetManagedDirectory());
 
-            GameAssemblyPath = Path.Combine(MelonEnvironment.GameRootDirectory, gameAssemblyName);
-            ManagedPath = MelonEnvironment.MelonManagedDirectory;
-            BasePath = MelonEnvironment.Il2CppAssemblyGeneratorDirectory;
+            BasePath = Path.GetDirectoryName(Assembly.Location);
         }
 
         private static int Run()
         {
             Config.Initialize();
 
-            if (!LoaderConfig.Current.UnityEngine.ForceOfflineGeneration)
+            if (!MelonLaunchOptions.Il2CppAssemblyGenerator.OfflineMode)
                 RemoteAPI.Contact();
 
-            Cpp2IL cpp2IL_netcore = new Cpp2IL();
-            if (MelonUtils.IsWindows
-                && (cpp2IL_netcore.VersionSem < Cpp2IL.NetCoreMinVersion))
-                cpp2il = new Cpp2IL_NetFramework();
+            // Temporary Workaround for Cpp2IL Failing on Unsupported OSes
+            if (!MelonUtils.IsUnderWineOrSteamProton() && ((Environment.OSVersion.Version.Major < 6) // Is Older than Vista
+                || ((Environment.OSVersion.Version.Major == 6) && (Environment.OSVersion.Version.Minor < 1)))) // Is Older than Windows 7 or Server 2008 R2
+                dumper = new Il2CppDumper();
             else
-                cpp2il = cpp2IL_netcore;
-            cpp2il_scrs = new Cpp2IL_StrippedCodeRegSupport(cpp2il);
+                dumper = new Cpp2IL();
 
-            il2cppinterop = new Packages.Il2CppInterop();
+            il2cppassemblyunhollower = new Il2CppAssemblyUnhollower();
             unitydependencies = new UnityDependencies();
             deobfuscationMap = new DeobfuscationMap();
             deobfuscationRegex = new DeobfuscationRegex();
 
-            Logger.Msg($"Using Cpp2IL Version: {(string.IsNullOrEmpty(cpp2il.Version) ? "null" : cpp2il.Version)}");
-            Logger.Msg($"Using Il2CppInterop Version = {(string.IsNullOrEmpty(il2cppinterop.Version) ? "null" : il2cppinterop.Version)}");
+            Logger.Msg($"Using Dumper Version: {(string.IsNullOrEmpty(dumper.Version) ? "null" : dumper.Version)}");
+            Logger.Msg($"Using Il2CppAssemblyUnhollower Version = {(string.IsNullOrEmpty(il2cppassemblyunhollower.Version) ? "null" : il2cppassemblyunhollower.Version)}");
             Logger.Msg($"Using Unity Dependencies Version = {(string.IsNullOrEmpty(unitydependencies.Version) ? "null" : unitydependencies.Version)}");
             Logger.Msg($"Using Deobfuscation Regex = {(string.IsNullOrEmpty(deobfuscationRegex.Regex) ? "null" : deobfuscationRegex.Regex)}");
 
-            if (!cpp2il.Setup()
-                || !cpp2il_scrs.Setup()
-                || !il2cppinterop.Setup()
+            if (!dumper.Setup()
+                || !il2cppassemblyunhollower.Setup()
                 || !unitydependencies.Setup()
                 || !deobfuscationMap.Setup())
                 return 1;
@@ -87,10 +74,10 @@ namespace MelonLoader.Il2CppAssemblyGenerator
             string CurrentGameAssemblyHash;
             Logger.Msg("Checking GameAssembly...");
             MelonDebug.Msg($"Last GameAssembly Hash: {Config.Values.GameAssemblyHash}");
-            MelonDebug.Msg($"Current GameAssembly Hash: {CurrentGameAssemblyHash = MelonUtils.ComputeSimpleSHA512Hash(GameAssemblyPath)}");
+            MelonDebug.Msg($"Current GameAssembly Hash: {CurrentGameAssemblyHash = FileHandler.Hash(GameAssemblyPath)}");
 
             if (string.IsNullOrEmpty(Config.Values.GameAssemblyHash)
-                || !Config.Values.GameAssemblyHash.Equals(CurrentGameAssemblyHash))
+                    || !Config.Values.GameAssemblyHash.Equals(CurrentGameAssemblyHash))
                 AssemblyGenerationNeeded = true;
 
             if (!AssemblyGenerationNeeded)
@@ -100,27 +87,27 @@ namespace MelonLoader.Il2CppAssemblyGenerator
             }
             Logger.Msg("Assembly Generation Needed!");
 
-            cpp2il.Cleanup();
-            il2cppinterop.Cleanup();
+            dumper.Cleanup();
+            il2cppassemblyunhollower.Cleanup();
 
-            if (!cpp2il.Execute())
+            if (!dumper.Execute())
             {
-                cpp2il.Cleanup();
+                dumper.Cleanup();
                 return 1;
             }
 
-            if (!il2cppinterop.Execute())
+            if (!il2cppassemblyunhollower.Execute())
             {
-                cpp2il.Cleanup();
-                il2cppinterop.Cleanup();
+                dumper.Cleanup();
+                il2cppassemblyunhollower.Cleanup();
                 return 1;
             }
 
             OldFiles_Cleanup();
             OldFiles_LAM();
 
-            cpp2il.Cleanup();
-            il2cppinterop.Cleanup();
+            dumper.Cleanup();
+            il2cppassemblyunhollower.Cleanup();
 
             Logger.Msg("Assembly Generation Successful!");
             deobfuscationRegex.Save();
@@ -137,7 +124,7 @@ namespace MelonLoader.Il2CppAssemblyGenerator
             for (int i = 0; i < Config.Values.OldFiles.Count; i++)
             {
                 string filename = Config.Values.OldFiles[i];
-                string filepath = Path.Combine(MelonEnvironment.Il2CppAssembliesDirectory, filename);
+                string filepath = Path.Combine(ManagedPath, filename);
                 if (File.Exists(filepath))
                 {
                     Logger.Msg("Deleting " + filename);
@@ -149,18 +136,16 @@ namespace MelonLoader.Il2CppAssemblyGenerator
 
         private static void OldFiles_LAM()
         {
-            string[] filepathtbl = Directory.GetFiles(il2cppinterop.OutputFolder);
-            string il2CppAssembliesDirectory = MelonEnvironment.Il2CppAssembliesDirectory;
+            string[] filepathtbl = Directory.GetFiles(il2cppassemblyunhollower.OutputFolder);
             for (int i = 0; i < filepathtbl.Length; i++)
             {
                 string filepath = filepathtbl[i];
                 string filename = Path.GetFileName(filepath);
                 Logger.Msg("Moving " + filename);
                 Config.Values.OldFiles.Add(filename);
-                string newfilepath = Path.Combine(il2CppAssembliesDirectory, filename);
+                string newfilepath = Path.Combine(ManagedPath, filename);
                 if (File.Exists(newfilepath))
                     File.Delete(newfilepath);
-                Directory.CreateDirectory(il2CppAssembliesDirectory);
                 File.Move(filepath, newfilepath);
             }
             Config.Save();

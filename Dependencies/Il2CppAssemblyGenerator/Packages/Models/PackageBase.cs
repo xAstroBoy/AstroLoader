@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Runtime.CompilerServices;
 
 namespace MelonLoader.Il2CppAssemblyGenerator.Packages.Models
 {
@@ -11,11 +12,7 @@ namespace MelonLoader.Il2CppAssemblyGenerator.Packages.Models
         internal string Version;
 
         internal virtual bool ShouldSetup() => true;
-
-        internal virtual bool OnProcess()
-            => FileHandler.Process(FilePath, Destination, MelonUtils.IsWindows ? null : Name);
-
-        internal virtual bool Setup()
+        internal bool Setup()
         {
             if (string.IsNullOrEmpty(Version) || string.IsNullOrEmpty(URL))
                 return true;
@@ -28,7 +25,7 @@ namespace MelonLoader.Il2CppAssemblyGenerator.Packages.Models
 
             Core.AssemblyGenerationNeeded = true;
 
-            if (!LoaderConfig.Current.UnityEngine.ForceOfflineGeneration
+            if (!MelonLaunchOptions.Il2CppAssemblyGenerator.OfflineMode
                 && ((this is DeobfuscationMap) || !File.Exists(FilePath)))
             {
                 Core.Logger.Msg($"Downloading {Name}...");
@@ -40,7 +37,7 @@ namespace MelonLoader.Il2CppAssemblyGenerator.Packages.Models
             }
 
             Core.Logger.Msg($"Processing {Name}...");
-            if (!OnProcess())
+            if (!FileHandler.Process(FilePath, Destination))
             {
                 ThrowInternalFailure($"Failed to Process {Name}!");
                 return false;
@@ -56,7 +53,8 @@ namespace MelonLoader.Il2CppAssemblyGenerator.Packages.Models
             configPref = Version;
             Config.Save();
         }
-        
-        internal static void ThrowInternalFailure(string txt) => MelonLogger.ThrowInternalFailure(txt);
+
+        [MethodImpl(MethodImplOptions.InternalCall)]
+        internal extern static void ThrowInternalFailure(string txt);
     }
 }

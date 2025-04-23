@@ -1,24 +1,14 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Reflection;
+using Boardgame.Modding;
+using Prototyping;
 using MelonLoader.Modules;
-
-[assembly: MelonLoader.PatchShield]
 
 namespace MelonLoader.CompatibilityLayers
 {
     internal class Demeo_Module : MelonModule
     {
-        private Dictionary<MelonBase, object> ModInformation = new Dictionary<MelonBase, object>();
-        private IList ModInfoList;
-
-        private Type modInfoType;
-        private FieldInfo name_field;
-        private FieldInfo version_field;
-        private FieldInfo author_field;
-        private FieldInfo description_field;
-        private FieldInfo isNetworkCompatible_field;
+        private static Dictionary<MelonBase, ModdingAPI.ModInformation> ModInformation = new Dictionary<MelonBase, ModdingAPI.ModInformation>();
 
         public override void OnInitialize()
         {
@@ -27,60 +17,24 @@ namespace MelonLoader.CompatibilityLayers
             MelonBase.OnMelonUnregistered.Subscribe(OnUnregister, int.MaxValue);
         }
 
-        private void OnPreAppStart()
+        private static void OnPreAppStart()
         {
-            try
+            HarmonyLib.Harmony harmony = new("DemeoIntegration");
+
+            harmony.Patch(Assembly.Load("Assembly-CSharp").GetType("Prototyping.RG").GetMethod("Initialize", BindingFlags.Public | BindingFlags.Static),
+                typeof(Demeo_Module).GetMethod("InitFix", BindingFlags.NonPublic | BindingFlags.Static).ToNewHarmonyMethod());
+
+            foreach (var m in MelonPlugin.RegisteredMelons)
             {
-                Assembly assembly = Assembly.Load("Assembly-CSharp");
-                Type moddingApi = assembly.GetType("Boardgame.Modding.ModdingAPI");
-
-                modInfoType = moddingApi.GetNestedType("ModInformation");
-                name_field = modInfoType.GetField("name", BindingFlags.Public | BindingFlags.Instance);
-                version_field = modInfoType.GetField("version", BindingFlags.Public | BindingFlags.Instance);
-                author_field = modInfoType.GetField("author", BindingFlags.Public | BindingFlags.Instance);
-                description_field = modInfoType.GetField("description", BindingFlags.Public | BindingFlags.Instance);
-                isNetworkCompatible_field = modInfoType.GetField("isNetworkCompatible", BindingFlags.Public | BindingFlags.Instance);
-
-                FieldInfo externalModsField = moddingApi.GetField("ExternallyInstalledMods", BindingFlags.Public | BindingFlags.Static);
-                if (externalModsField.GetValue(null) == null)
-                {
-                    var listType = typeof(List<>);
-                    var constructedListType = listType.MakeGenericType(modInfoType);
-                    ModInfoList = (IList)Activator.CreateInstance(constructedListType);
-                    externalModsField.SetValue(null, ModInfoList);
-                }
-
-                foreach (var m in MelonPlugin.RegisteredMelons)
-                {
-                    try
-                    {
-                        ParseMelon(m);
-                    }
-                    catch (Exception ex)
-                    {
-                        MelonLogger.Error($"Demeo Integration has thrown an exception: {ex}");
-                    }
-                }
-
-                foreach (var m in MelonMod.RegisteredMelons)
-                {
-                    try
-                    {
-                        ParseMelon(m);
-                    }
-                    catch (Exception ex)
-                    {
-                        MelonLogger.Error($"Demeo Integration has thrown an exception: {ex}");
-                    }
-                }
+                ParseMelon(m);
             }
-            catch (Exception ex)
+            foreach (var m in MelonMod.RegisteredMelons)
             {
-                MelonLogger.Error($"Demeo Integration has thrown an exception: {ex}");
+                ParseMelon(m);
             }
         }
 
-        private void OnUnregister(MelonBase melon)
+        private static void OnUnregister(MelonBase melon)
         {
             if (melon == null)
                 return;
@@ -88,19 +42,15 @@ namespace MelonLoader.CompatibilityLayers
             if (!ModInformation.ContainsKey(melon))
                 return;
 
-            try
-            {
-                object info = ModInformation[melon];
-                ModInformation.Remove(melon);
-                ModInfoList.Remove(info);
-            }
-            catch (Exception ex)
-            {
-                MelonLogger.Error($"Demeo Integration has thrown an exception: {ex}");
-            }
+            ModInformation.Remove(melon);
+
+            if (ModdingAPI.ExternallyInstalledMods == null)
+                ModdingAPI.ExternallyInstalledMods = new List<ModdingAPI.ModInformation>();
+            else
+                ModdingAPI.ExternallyInstalledMods.Remove(ModInformation[melon]);
         }
 
-        private void ParseMelon<T>(T melon) where T : MelonBase
+        private static void ParseMelon<T>(T melon) where T : MelonBase
         {
 
             if (melon == null)
@@ -109,23 +59,27 @@ namespace MelonLoader.CompatibilityLayers
             if (ModInformation.ContainsKey(melon))
                 return;
 
-            try
-            {
-                object info = Activator.CreateInstance(modInfoType);
+            ModdingAPI.ModInformation info = new ModdingAPI.ModInformation();
+            info.SetName(melon.Info.Name);
+            info.SetVersion(melon.Info.Version);
+            info.SetAuthor(melon.Info.Author);
+            info.SetDescription(melon.Info.DownloadLink);
+            info.SetIsNetworkCompatible(MelonUtils.PullAttributeFromAssembly<Demeo_LobbyRequirement>(melon.MelonAssembly.Assembly) == null);
 
-                name_field.SetValue(info, melon.Info.Name);
-                version_field.SetValue(info, melon.Info.Version);
-                author_field.SetValue(info, melon.Info.Author);
-                description_field.SetValue(info, melon.Info.DownloadLink);
-                isNetworkCompatible_field.SetValue(info, MelonUtils.PullAttributeFromAssembly<Demeo_LobbyRequirement>(melon.MelonAssembly.Assembly) == null);
+            ModInformation.Add(melon, info);
 
-                ModInformation.Add(melon, info);
-                ModInfoList.Add(info);
-            }
-            catch (Exception ex)
-            {
-                MelonLogger.Error($"Demeo Integration has thrown an exception: {ex}");
-            }
+            if (ModdingAPI.ExternallyInstalledMods == null)
+                ModdingAPI.ExternallyInstalledMods = new List<ModdingAPI.ModInformation>();
+            ModdingAPI.ExternallyInstalledMods.Add(info);
+        }
+
+        private static bool InitFix()
+        {
+            if (MotherbrainGlobalVars.IsRunningOnDesktop)
+                RG.SetVrMode(false);
+            else
+                RG.SetVrMode(RG.XRDeviceIsPresent());
+            return true;
         }
     }
 }
