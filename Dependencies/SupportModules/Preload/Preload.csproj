@@ -18,21 +18,17 @@
 	</PropertyGroup>
 	<ItemGroup>
 	  <None Remove="Resources\**" />
+	  <!-- The legacy ResX-based resource pipeline embedded these net2.0 framework
+	       assemblies as typed byte[] resources, which requires ResGen.exe and cannot
+	       be built by the .NET SDK (Core) MSBuild. Embed them directly instead and load
+	       them by manifest name at runtime (see Preload.cs). -->
+	  <Compile Remove="Properties\Resources.Designer.cs" />
+	  <EmbeddedResource Remove="Properties\Resources.resx" />
+	  <EmbeddedResource Include="Resources\System.dll"><LogicalName>System.dll</LogicalName></EmbeddedResource>
+	  <EmbeddedResource Include="Resources\System.Core.dll"><LogicalName>System.Core.dll</LogicalName></EmbeddedResource>
+	  <EmbeddedResource Include="Resources\System.Drawing.dll"><LogicalName>System.Drawing.dll</LogicalName></EmbeddedResource>
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Include="..\..\..\MelonLoader\Properties\BuildInfo.cs" Link="Properties\BuildInfo.cs" />
-	</ItemGroup>
-	<ItemGroup>
-	  <Compile Update="Properties\Resources.Designer.cs">
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	    <DependentUpon>Resources.resx</DependentUpon>
-	  </Compile>
-	</ItemGroup>
-	<ItemGroup>
-	  <EmbeddedResource Update="Properties\Resources.resx">
-	    <Generator>ResXFileCodeGenerator</Generator>
-	    <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-	  </EmbeddedResource>
 	</ItemGroup>
 </Project>

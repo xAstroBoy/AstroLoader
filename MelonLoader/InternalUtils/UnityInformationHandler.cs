@@ -22,12 +22,31 @@ namespace MelonLoader.InternalUtils
         public static UnityVersion EngineVersion { get; private set; }
         public static string GameVersion { get; private set; }
 
+        // Matches the canonical Unity engine version token: <major>.<minor>.<patch><type><build>
+        // (type is one of a=alpha, b=beta, c=china, f=final, p=patch, x=experimental).
+        private static readonly Regex UnityVersionToken = new Regex(@"\d+\.\d+\.\d+[abcfpx]\d+", RegexOptions.Compiled);
+
         private static UnityVersion TryParse(string version)
         {
+            if (string.IsNullOrEmpty(version))
+                return UnityVersion.MinVersion;
+
+            string cleaned = version.Trim();
+
+            // Unity serialized files / AssetBundle headers frequently append a build or
+            // changeset suffix to the engine version, e.g. "2022.3.45f1-378343" or
+            // "2022.3.45f1_abcdef123456". AssetRipper's UnityVersion.Parse only accepts the
+            // canonical form and throws on anything else, which left EngineVersion at
+            // MinVersion (0.0.0a0). Extract the canonical token first so detection is
+            // universal across modern Unity versions.
+            Match match = UnityVersionToken.Match(cleaned);
+            if (match.Success)
+                cleaned = match.Value;
+
             UnityVersion returnval = UnityVersion.MinVersion;
-            try 
+            try
             {
-                returnval = UnityVersion.Parse(version); 
+                returnval = UnityVersion.Parse(cleaned);
             }
             catch (Exception ex)
             {
@@ -87,13 +106,24 @@ namespace MelonLoader.InternalUtils
                     if (!APKAssetManager.DoesAssetExist(bundlePath))
                         return;
 
-                    Stream bundleStream = APKAssetManager.GetAssetStream(bundlePath);
+                    // AssetsTools.NET needs random access while reading/unpacking the bundle,
+                    // but the Android AssetManager stream (APKAssetStream) is forward-only and
+                    // throws on seek. Buffer the asset into a seekable MemoryStream first.
+                    Stream bundleStream = new MemoryStream(APKAssetManager.GetAssetBytes(bundlePath));
                     BundleFileInstance bundleFile = assetsManager.LoadBundleFile(bundleStream, bundlePath);
-                    instance = assetsManager.LoadAssetsFileFromBundle(bundleFile, "globalgamemanagers");
+
+                    // NOTE: We deliberately avoid AssetsManager.LoadAssetsFileFromBundle here.
+                    // That helper gates on AssetBundleFile.IsAssetsFile(), whose heuristic in the
+                    // bundled AssetsTools.NET version returns a false negative for SerializedFile
+                    // format >= 0x16 (Unity 2017+/2020+/2022+), so it returns null and game info is
+                    // never read. Instead we locate the serialized file, read its (already
+                    // decompressed) bytes from the bundle and load it as a standalone assets file,
+                    // which parses every modern format correctly.
+                    instance = LoadSerializedFileFromBundle(assetsManager, bundleFile, "globalgamemanagers");
                 }
                 else
                 {
-                    Stream bundleStream = APKAssetManager.GetAssetStream(bundlePath);
+                    Stream bundleStream = new MemoryStream(APKAssetManager.GetAssetBytes(bundlePath));
                     instance = assetsManager.LoadAssetsFile(bundleStream, bundlePath, true);
                 }
 
@@ -136,6 +166,25 @@ namespace MelonLoader.InternalUtils
             }
             if (instance != null)
                 instance.file.Close();
+        }
+
+        // Loads a serialized file (e.g. "globalgamemanagers") out of an already-loaded bundle
+        // without going through AssetsManager.LoadAssetsFileFromBundle, which can wrongly reject
+        // newer SerializedFile formats via its IsAssetsFile() heuristic. Returns null if the file
+        // isn't present in the bundle.
+        private static AssetsFileInstance LoadSerializedFileFromBundle(AssetsManager assetsManager, BundleFileInstance bundleFile, string name)
+        {
+            int index = bundleFile.file.GetFileIndex(name);
+            if (index < 0)
+                return null;
+
+            bundleFile.file.GetFileRange(index, out long offset, out long length);
+
+            AssetsFileReader reader = bundleFile.file.DataReader;
+            reader.Position = offset;
+            byte[] serializedFileData = reader.ReadBytes((int)length);
+
+            return assetsManager.LoadAssetsFile(new MemoryStream(serializedFileData), name, false);
         }
 
         private static void ReadGameInfoFallback()

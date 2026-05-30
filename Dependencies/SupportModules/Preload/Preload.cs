@@ -15,22 +15,38 @@ namespace MelonLoader.Support
 
             string managedFolder = string.Copy(GetManagedDirectory());
 
-            WriteResource(Properties.Resources.System, Path.Combine(managedFolder, "System.dll"));
-            WriteResource(Properties.Resources.System_Core, Path.Combine(managedFolder, "System.Core.dll"));
-            WriteResource(Properties.Resources.System_Drawing, Path.Combine(managedFolder, "System.Drawing.dll"));
+            WriteResource("System.dll", Path.Combine(managedFolder, "System.dll"));
+            WriteResource("System.Core.dll", Path.Combine(managedFolder, "System.Core.dll"));
+            WriteResource("System.Drawing.dll", Path.Combine(managedFolder, "System.Drawing.dll"));
         }
 
         [MethodImpl(MethodImplOptions.InternalCall)]
         [return: MarshalAs(UnmanagedType.LPStr)]
         private static extern string GetManagedDirectory();
 
-        private static void WriteResource(byte[] data, string destination)
+        private static void WriteResource(string resourceName, string destination)
         {
             try
             {
-                if (File.Exists(destination))
-                    File.Delete(destination);
-                File.WriteAllBytes(destination, data);
+                using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName))
+                {
+                    if (stream == null)
+                        return;
+
+                    byte[] data = new byte[stream.Length];
+                    int offset = 0;
+                    while (offset < data.Length)
+                    {
+                        int read = stream.Read(data, offset, data.Length - offset);
+                        if (read <= 0)
+                            break;
+                        offset += read;
+                    }
+
+                    if (File.Exists(destination))
+                        File.Delete(destination);
+                    File.WriteAllBytes(destination, data);
+                }
             }
             catch { }
         }
