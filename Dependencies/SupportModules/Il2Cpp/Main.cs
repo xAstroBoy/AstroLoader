@@ -65,6 +65,10 @@ namespace MelonLoader.Support
             Interface.SetInteropSupportInterface(Interop);
             runtime.Start();
 
+            // Embedded UnityExplorer-class remote inspector/controller (part of MelonLoader, not a mod).
+            try { MelonBridge.Start(); }
+            catch (Exception ex) { MelonLogger.Warning($"[MelonBridge] failed to start: {ex}"); }
+
             return new SupportModule_To();
         }
 

@@ -136,6 +136,9 @@ namespace MelonLoader.Support
             SiblingFix();
 
             SceneHandler.OnUpdate();
+#if SM_Il2Cpp
+            MelonBridge.Pump();
+#endif
             Main.Interface.Update();
         }
 

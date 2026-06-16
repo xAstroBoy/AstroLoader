@@ -35,16 +35,18 @@ fn detour_inner(
     let safe_method = UnityMethod::new(method.cast())?;
     let name = safe_method.get_name(runtime)?;
 
+    // Trigger MelonLoader's pre_start (assembly dump) + start (mod load) the first time the engine
+    // raises the managed scene-changed callback through il2cpp_runtime_invoke. This runs on the
+    // Unity main thread, which is the thread with a valid JNI env / app classloader -- required by
+    // the assembly generator (reads global-metadata.dat via the APK AssetManager over JNI).
     if name.contains("Internal_ActiveSceneChanged") {
         debug!("Detaching hook from il2cpp_runtime_invoke")?;
         trampoline.unhook()?;
 
         debug!("Resetting mono thread")?;
-
         let lib = crate::mono_lib!()?;
         let thread_suspend_reload = lib.exports.mono_melonloader_thread_suspend_reload.as_ref().unwrap();
         thread_suspend_reload();
-        
         debug!("Mono thread reset")?;
 
         base_assembly::pre_start()?;

@@ -162,5 +162,10 @@ namespace MelonLoader.Il2CppAssemblyGenerator.Packages
         {
             return _cache.GetValueOrDefault(name);
         }
+
+        public ModuleDefinition Resolve(string name, ModuleDefinition module)
+        {
+            return Resolve(name);
+        }
     }
 }
