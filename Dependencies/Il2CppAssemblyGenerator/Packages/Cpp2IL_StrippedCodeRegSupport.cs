@@ -23,7 +23,7 @@ namespace MelonLoader.Il2CppAssemblyGenerator.Packages
                 Destination =
                 Path.Combine(_pluginsFolder, fileName);
 
-            URL = $"https://github.com/SamboyCoding/{cpp2IL.Name}/releases/download/{cpp2IL.Version}/{fileName}";
+            URL = $"https://github.com/xAstroBoy/{cpp2IL.Name}/releases/download/{cpp2IL.Version}/{fileName}";
         }
 
         internal override bool ShouldSetup()

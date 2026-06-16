@@ -155,33 +155,65 @@ namespace MelonLoader.Il2CppAssemblyGenerator
 
         private static bool TryDownloadPreGenerated(string hash)
         {
-            const string PREGENERATED_TEMPLATE = "https://github.com/LemonLoader/PregeneratedInteropData/raw/refs/heads/main/{0}.zip";
+            // Our repo only (AstroLoader). Hosts data for modified-Unity / Meta v31 titles such as
+            // Batman: Arkham Shadow that the on-device dumper can't generate correctly.
+            string[] templates =
+            {
+                "https://github.com/xAstroBoy/PregeneratedInteropData/raw/refs/heads/main/{0}.zip",
+            };
 
-            try
+            bool anyNotFound = false;
+            foreach (string template in templates)
             {
-                webClient.DownloadFile(string.Format(PREGENERATED_TEMPLATE, hash), Path.Combine(BasePath, "Pregenerated.zip"));
-                return true;
-            }
-            catch (HttpRequestException ex)
-            {
-                if (ex.StatusCode == HttpStatusCode.NotFound)
+                try
                 {
-                    Logger.Msg($"Pre-Generated Assemblies Not Found");
-                    return false;
+                    webClient.DownloadFile(string.Format(template, hash), Path.Combine(BasePath, "Pregenerated.zip"));
+                    return true;
                 }
+                catch (HttpRequestException ex)
+                {
+                    if (ex.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        anyNotFound = true;
+                        continue; // try the next mirror
+                    }
 
-                Logger.Error($"HttpRequestException while Downloading Pre-Generated Assemblies: {ex}");
-                return false;
+                    Logger.Error($"HttpRequestException while Downloading Pre-Generated Assemblies: {ex}");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Exception while Downloading Pre-Generated Assemblies: {ex}");
+                }
             }
-            catch (Exception ex)
-            {
-                Logger.Error($"Exception while Downloading Pre-Generated Assemblies: {ex}");
-                return false;
-            }
+
+            if (anyNotFound)
+                Logger.Msg($"Pre-Generated Assemblies Not Found");
+            return false;
         }
 
         private string GetLibIl2CppPath()
         {
+            // Preferred: read the mapped path of libil2cpp.so straight from /proc/self/maps. This is
+            // thread-independent and needs no JNI/app-classloader, so it works no matter which thread
+            // assembly generation is triggered from (JNI FindClass for app classes only works on the
+            // main/init thread). Falls back to the JNI lookup below if maps parsing finds nothing.
+            try
+            {
+                foreach (string mapLine in File.ReadAllLines("/proc/self/maps"))
+                {
+                    int slash = mapLine.IndexOf('/');
+                    if (slash < 0)
+                        continue;
+                    string mapped = mapLine.Substring(slash).Trim();
+                    if (mapped.EndsWith("/libil2cpp.so"))
+                        return mapped;
+                }
+            }
+            catch (Exception ex)
+            {
+                MelonLogger.Msg($"Reading libil2cpp path from /proc/self/maps failed, falling back to JNI: {ex.Message}");
+            }
+
             JClass unityClass = JNI.FindClass("com/unity3d/player/UnityPlayer");
             JFieldID activityFieldId = JNI.GetStaticFieldID(unityClass, "currentActivity", "Landroid/app/Activity;");
             JObject currentActivityObj = JNI.GetStaticObjectField<JObject>(unityClass, activityFieldId);
