@@ -57,7 +57,10 @@ namespace MelonLoader
                 }
                 catch (Exception ex)
                 {
-                    MelonDebug.Error($"Support Module [{enumerator.Current.FileName}] threw an Exception: {ex}");
+                    // This used to be MelonDebug.Error (suppressed unless debug logging is on), which
+                    // silently hid real support-module load failures behind a bare "No Support Module
+                    // Loaded!". A module that exists on disk but fails to load is always worth surfacing.
+                    MelonLogger.Error($"Support Module [{enumerator.Current.FileName}] threw an Exception: {ex}");
                     continue;
                 }
             }

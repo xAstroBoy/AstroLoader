@@ -18,6 +18,11 @@ pub type InvokeFnIl2Cpp = extern "C" fn(
 pub type InitFnMono = extern "C" fn(*const c_char, *const c_char) -> *mut MonoDomain;
 pub type InitFnIl2Cpp = extern "C" fn(*const c_char) -> *mut Il2CppDomain;
 
+/// il2cpp_object_new(Il2CppClass* klass) -> Il2CppObject*. Used as a reliable "runtime is alive"
+/// tick: called for every managed allocation, including on games (Meta's modified il2cpp) that
+/// never route anything through il2cpp_runtime_invoke.
+pub type ObjectNewFnIl2Cpp = extern "C" fn(*mut c_void) -> *mut c_void;
+
 pub const MELON_VERSION: &str = "0.6.6";
 
 pub const IS_ALPHA: bool = false;

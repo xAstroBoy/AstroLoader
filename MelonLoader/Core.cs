@@ -114,10 +114,13 @@ namespace MelonLoader
             Fixes.InstancePatchFix.Install();
             Fixes.ProcessFix.Install();
 
-#if NET6_0_OR_GREATER
-            Fixes.Il2CppInteropFixes.Install();
-            Fixes.Il2CppICallInjector.Install();
-#endif
+            // NOTE: Il2CppInteropFixes / Il2CppICallInjector are intentionally NOT installed here.
+            // Installing them patches ClassInjector.RegisterTypeInIl2Cpp, which MonoMod eagerly JIT-
+            // compiles; that triggers Il2CppInterop's InjectorHelpers static constructor, which needs
+            // the generated Il2Cpp* interop assemblies (e.g. Il2Cppmscorlib). Those don't exist until
+            // Il2CppAssemblyGenerator has run, so doing it here permanently faults that cctor (the
+            // TypeInitializationException is cached), breaking interop and hanging the game at load.
+            // They are installed in PreSetup(), right after assembly generation succeeds.
 
             PatchShield.Install();
 
@@ -145,6 +148,14 @@ namespace MelonLoader
 #if NET6_0_OR_GREATER
             if (_success)
                 _success = Il2CppAssemblyGenerator.Run();
+
+            // Install the Il2CppInterop fixes now that the generated interop assemblies exist on disk.
+            // (Done here, not in Initialize(), so InjectorHelpers' static ctor can resolve Il2Cpp*.)
+            if (_success)
+            {
+                Fixes.Il2CppInteropFixes.Install();
+                Fixes.Il2CppICallInjector.Install();
+            }
 #endif
 
             return _success ? 0 : 1;

@@ -128,19 +128,20 @@ namespace MelonLoader.Il2CppAssemblyGenerator.Packages
 
                 Core.Logger.Msg($"    {processingLayer.Name}...");
 
-#if !DEBUG
                 try
                 {
-#endif
-                run(processingLayer);
-#if !DEBUG
+                    run(processingLayer);
                 }
                 catch (Exception e)
                 {
-                    Logger.ErrorNewline($"Processing layer {processingLayer.Id} threw an exception: {e}");
-                    Environment.Exit(1);
+                    // NOTE: upstream called Environment.Exit(1) here, which kills the whole host game
+                    // process if any processing layer (e.g. attributeinjector) throws -- which happens
+                    // on modified/unusual il2cpp metadata (e.g. Meta's metadata v31). A failed *optional*
+                    // processing layer must not abort the dump: log it (to the Melon log, so it's
+                    // visible/flushed) and continue, so the dummy assemblies still get written by the
+                    // output stage below.
+                    Core.Logger.Error($"Processing layer {processingLayer.Id} threw an exception (continuing without it): {e}");
                 }
-#endif
 
                 Core.Logger.Msg($"    {processingLayer.Name} finished in {(DateTime.Now - processorStart).TotalMilliseconds}ms");
             }

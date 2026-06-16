@@ -41,14 +41,26 @@ internal static class MelonConsole
             || MelonLaunchOptions.Console.ShouldHide
             || (ConsoleOutWriter == null));
 
+    // ANSI/Pastel color escapes ([38;2;r;g;bm etc). On Android these can't be rendered by logcat and show up
+    // as garbled junk around the timestamp/text, so strip them on non-Windows (keep them for the PC console).
+    private static readonly System.Text.RegularExpressions.Regex AnsiRegex =
+        new System.Text.RegularExpressions.Regex(@"\x1B\[[0-9;]*m", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    private static string CleanForPlatform(string txt)
+    {
+        if (txt != null && !MelonUtils.IsWindows)
+            return AnsiRegex.Replace(txt, "");
+        return txt;
+    }
+
     internal static void WriteLine(string txt)
     {
-        BootstrapInterop.NativeLogConsole(txt);
+        BootstrapInterop.NativeLogConsole(CleanForPlatform(txt));
     }
 
     internal static void WriteLine(object txt)
     {
-        BootstrapInterop.NativeLogConsole(txt.ToString());
+        BootstrapInterop.NativeLogConsole(CleanForPlatform(txt?.ToString()));
     }
 
     internal static void WriteLine()
