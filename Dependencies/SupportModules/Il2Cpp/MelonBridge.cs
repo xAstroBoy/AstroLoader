@@ -825,11 +825,19 @@ namespace MelonLoader.Support
                 string fn = cppType.FullName;
                 if (!string.IsNullOrEmpty(fn))
                 {
-                    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                    // Il2CppInterop renames game namespaces with an "Il2Cpp" prefix: the il2cpp class
+                    // "XRClimbGame.GameSave" becomes the managed proxy "Il2CppXRClimbGame.GameSave". Search
+                    // the raw name first (Unity/System types keep theirs), then the prefixed proxy name -
+                    // otherwise game-specific MonoBehaviours never resolve and fall back to base Component,
+                    // hiding all their fields/properties.
+                    foreach (var cand in new[] { fn, "Il2Cpp" + fn })
                     {
-                        Type t = null;
-                        try { t = asm.GetType(fn, false); } catch { }
-                        if (t != null && typeof(Il2CppObjectBase).IsAssignableFrom(t)) return t;
+                        foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                        {
+                            Type t = null;
+                            try { t = asm.GetType(cand, false); } catch { }
+                            if (t != null && typeof(Il2CppObjectBase).IsAssignableFrom(t)) return t;
+                        }
                     }
                 }
             }
