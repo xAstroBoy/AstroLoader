@@ -2,10 +2,10 @@
 {
     public static class BuildInfo
     {
-        public const string Name = "MelonLoader";
-        public const string Description = "MelonLoader";
-        public const string Author = "Lava Gang";
-        public const string Company = "discord.gg/2Wn3N2P";
-        public const string Version = "0.6.6";
+        public const string Name = "AstroLoader";
+        public const string Description = "AstroLoader (LemonLoader fork)";
+        public const string Author = "xAstroBoy";
+        public const string Company = "github.com/xAstroBoy/LemonLoader";
+        public const string Version = "0.6.8";
     }
 }

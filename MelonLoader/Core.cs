@@ -188,8 +188,7 @@ namespace MelonLoader
         
         internal static string GetVersionString()
         {
-            var lemon = MelonLaunchOptions.Console.Mode == MelonLaunchOptions.Console.DisplayMode.LEMON;
-            var versionStr = $"{(lemon ? "Lemon" : "Melon")}Loader " +
+            var versionStr = $"{BuildInfo.Name} " +
                              $"v{BuildInfo.Version} " +
                              $"{(Is_ALPHA_PreRelease ? "ALPHA Pre-Release" : "Open-Beta")}";
             return versionStr;
