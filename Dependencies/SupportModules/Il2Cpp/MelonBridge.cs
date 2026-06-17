@@ -185,10 +185,10 @@ namespace MelonLoader.Support
                         int idx = -1;
                         for (int i = 0; i < comps.Length; i++) if (comps[i] != null && comps[i].GetInstanceID() == rid) { idx = i; break; }
                         sb.Append("comp\t").Append(owner.GetInstanceID()).Append('\t').Append(owner.name).Append('\t')
-                          .Append(idx).Append('\t').Append(RealType(comp).FullName).Append('\n');
+                          .Append(idx).Append('\t').Append(RealTypeName(comp)).Append('\n');
                         break;
                     }
-                    sb.Append("obj\t").Append(RealType(obj).FullName).Append('\n');
+                    sb.Append("obj\t").Append(RealTypeName(obj)).Append('\n');
                     break;
                 }
 
@@ -316,7 +316,7 @@ namespace MelonLoader.Support
                         sb.Append('#').Append(i).Append('\t');
                         if (comps[i] == null) { sb.Append("<null>\t-\n"); continue; }
                         var rt = RealType(comps[i]);
-                        sb.Append(rt.FullName).Append('\t').Append(ReadEnabled(comps[i], rt)).Append('\n');
+                        sb.Append(RealTypeName(comps[i])).Append('\t').Append(ReadEnabled(comps[i], rt)).Append('\n');
                     }
                     break;
                 }
@@ -835,6 +835,22 @@ namespace MelonLoader.Support
             }
             catch { }
             return obj.GetType();
+        }
+
+        // The DISPLAY name must be the REAL il2cpp type (e.g. a game's "ManagersDontDestroy" MonoBehaviour),
+        // even when no managed proxy exists for it. RealType() falls back to the base UnityEngine.Component in
+        // that case (proxy not generated for game-specific types) - which is what showed every script as just
+        // "Component". The il2cpp class name is always available, so read it directly here.
+        private static string RealTypeName(Il2CppObjectBase obj)
+        {
+            try
+            {
+                var cppType = Il2CppType.TypeFromPointer(IL2CPP.il2cpp_object_get_class(obj.Pointer));
+                string fn = cppType.FullName;
+                if (!string.IsNullOrEmpty(fn)) return fn;
+            }
+            catch { }
+            try { return obj.GetType().FullName; } catch { return "UnityEngine.Component"; }
         }
 
         // Il2CppObjectBase.TryCast<T>() over a runtime Type, so reflection GetValue/Invoke target the real type.
